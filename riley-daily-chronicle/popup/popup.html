@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Chronicle</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="popup-container">
+        <header class="popup-header">
+            <h1 class="popup-title">THE DAILY CHRONICLE</h1>
+            <p class="popup-subtitle">Today's AI Activity Summary</p>
+            <p class="popup-date" id="currentDate">Loading...</p>
+        </header>
+
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-box">
+                <span class="stat-value" id="totalMessages">-</span>
+                <span class="stat-label">Messages</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-value" id="totalPrompts">-</span>
+                <span class="stat-label">Prompts</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-value" id="totalResponses">-</span>
+                <span class="stat-label">Responses</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-value" id="platformCount">-</span>
+                <span class="stat-label">Platforms</span>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">Platform Breakdown</h2>
+            <div class="platform-bars" id="platformBars">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">Time Distribution</h2>
+            <div class="time-grid" id="timeGrid">
+                <div class="time-slot">
+                    <span class="time-icon">☀</span>
+                    <span class="time-label">Morning</span>
+                    <span class="time-value" id="morningCount">0</span>
+                </div>
+                <div class="time-slot">
+                    <span class="time-icon">◐</span>
+                    <span class="time-label">Afternoon</span>
+                    <span class="time-value" id="afternoonCount">0</span>
+                </div>
+                <div class="time-slot">
+                    <span class="time-icon">☽</span>
+                    <span class="time-label">Evening</span>
+                    <span class="time-value" id="eveningCount">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="section highlights" id="highlightsSection">
+            <h2 class="section-title">Highlights</h2>
+            <div class="highlight-item" id="mostActive">
+                <span class="highlight-label">Most Active:</span>
+                <span class="highlight-value" id="mostActiveValue">-</span>
+            </div>
+            <div class="highlight-item" id="toolsUsed">
+                <span class="highlight-label">Tools Used:</span>
+                <span class="highlight-value" id="toolsUsedValue">0</span>
+            </div>
+            <div class="highlight-item" id="driveLinks">
+                <span class="highlight-label">Drive Links:</span>
+                <span class="highlight-value" id="driveLinksValue">0</span>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button class="btn btn-primary" id="openChronicle">
+                View Full Chronicle
+            </button>
+            <button class="btn btn-secondary" id="refreshStats">
+                Refresh
+            </button>
+        </div>
+
+        <footer class="popup-footer">
+            <span class="footer-ornament">◆ ❖ ◆</span>
+        </footer>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>

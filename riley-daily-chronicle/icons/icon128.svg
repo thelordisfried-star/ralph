@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <rect width="128" height="128" fill="#d4af37"/>
+  <rect x="8" y="8" width="112" height="112" fill="#f4ecd8"/>
+  <rect x="8" y="8" width="112" height="16" fill="#8b7355"/>
+  <rect x="8" y="104" width="112" height="16" fill="#8b7355"/>
+  <text x="64" y="72" font-family="serif" font-size="32" font-weight="bold" text-anchor="middle" fill="#1a1a1a">DAILY</text>
+  <text x="64" y="92" font-family="serif" font-size="14" text-anchor="middle" fill="#8b7355">CHRONICLE</text>
+</svg>

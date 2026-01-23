@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Daily Chronicle</title>
+    <link rel="stylesheet" href="chronicle.css">
+</head>
+<body>
+    <!-- Mode Toggle -->
+    <div class="mode-toggle">
+        <button class="mode-btn active" id="autoModeBtn" data-mode="auto">Auto Mode</button>
+        <button class="mode-btn" id="editModeBtn" data-mode="edit">Edit Mode</button>
+        <button class="mode-btn refresh-btn" id="refreshBtn">Refresh Data</button>
+        <button class="mode-btn" id="exportBtn">Export PDF</button>
+        <button class="mode-btn" id="archiveBtn">Archive Today</button>
+    </div>
+
+    <div class="newspaper">
+        <div class="content-wrapper">
+            <header class="masthead">
+                <h1 class="title">THE DAILY CHRONICLE</h1>
+                <p class="subtitle">Riley Hallow's Personal Journal of System Building & Discovery</p>
+                <p class="date-line" id="currentDate">Thursday, January 22, 2026</p>
+            </header>
+
+            <!-- Quick Stats Bar -->
+            <div class="stats-bar">
+                <div class="stat-item">
+                    <span class="stat-number" id="statMessages">0</span>
+                    <span class="stat-text">Messages</span>
+                </div>
+                <div class="stat-divider">|</div>
+                <div class="stat-item">
+                    <span class="stat-number" id="statPlatforms">0</span>
+                    <span class="stat-text">Platforms</span>
+                </div>
+                <div class="stat-divider">|</div>
+                <div class="stat-item">
+                    <span class="stat-number" id="statTools">0</span>
+                    <span class="stat-text">Tools Used</span>
+                </div>
+                <div class="stat-divider">|</div>
+                <div class="stat-item">
+                    <span class="stat-number" id="statDrive">0</span>
+                    <span class="stat-text">Drive Links</span>
+                </div>
+            </div>
+
+            <div class="main-layout">
+                <div class="main-content">
+                    <div class="section-header">MORNING EDITION</div>
+
+                    <article class="article">
+                        <h2 class="article-title">Dawn Activities & First Accomplishments</h2>
+                        <div class="article-time">12:00 AM - 11:59 AM</div>
+                        <div class="article-content" id="morningContent" data-section="morning">
+                            <div class="auto-content" id="morningAuto">
+                                <p class="placeholder">No morning activity captured yet...</p>
+                            </div>
+                            <div class="edit-content editable" contenteditable="false" data-placeholder="What did you accomplish this morning? Any 3AM building sessions? Script runs? First victories of the day?"></div>
+                        </div>
+                    </article>
+
+                    <div class="section-header">AFTERNOON DISPATCH</div>
+
+                    <article class="article">
+                        <h2 class="article-title">Midday Progress & System Evolution</h2>
+                        <div class="article-time">12:00 PM - 5:59 PM</div>
+                        <div class="article-content" id="afternoonContent" data-section="afternoon">
+                            <div class="auto-content" id="afternoonAuto">
+                                <p class="placeholder">No afternoon activity captured yet...</p>
+                            </div>
+                            <div class="edit-content editable" contenteditable="false" data-placeholder="What systems did you build or refine? Any breakthroughs in your automation frameworks? Files organized?"></div>
+                        </div>
+                    </article>
+
+                    <div class="section-header">EVENING EDITION</div>
+
+                    <article class="article">
+                        <h2 class="article-title">Day's Final Achievements & Reflections</h2>
+                        <div class="article-time">6:00 PM - 11:59 PM</div>
+                        <div class="article-content" id="eveningContent" data-section="evening">
+                            <div class="auto-content" id="eveningAuto">
+                                <p class="placeholder">No evening activity captured yet...</p>
+                            </div>
+                            <div class="edit-content editable" contenteditable="false" data-placeholder="How did the day conclude? Final wins? What did you learn about your workflow?"></div>
+                        </div>
+                    </article>
+
+                    <div class="drive-box">
+                        <h3 class="article-title" style="text-align: center; margin-bottom: 15px;">Today's Drive Activity</h3>
+                        <div class="article-content" id="driveContent">
+                            <div class="auto-content" id="driveAuto">
+                                <p class="placeholder">No Google Drive links detected in conversations...</p>
+                            </div>
+                            <div class="edit-content editable" contenteditable="false" data-placeholder="Which of your 192+ folders did you touch today? New files created? Updates to Claudework, KingClaude, or ClaudiveSysclaude? Paste Drive links or describe connections."></div>
+                        </div>
+                    </div>
+                </div>
+
+                <aside class="sidebar">
+                    <h3 class="sidebar-title">TODAY'S HIGHLIGHTS</h3>
+
+                    <div class="sidebar-item">
+                        <span class="sidebar-label">TOP WIN:</span>
+                        <div class="auto-content" id="topWinAuto">
+                            <span class="placeholder-small">-</span>
+                        </div>
+                        <div class="edit-content editable" contenteditable="false" data-placeholder="Biggest accomplishment"></div>
+                    </div>
+
+                    <div class="sidebar-item">
+                        <span class="sidebar-label">CONVERSATIONS:</span>
+                        <div class="auto-content" id="conversationsAuto">
+                            <span class="placeholder-small">0</span>
+                        </div>
+                        <div class="edit-content editable" contenteditable="false" data-placeholder="Active chats"></div>
+                    </div>
+
+                    <div class="sidebar-item">
+                        <span class="sidebar-label">MOST ACTIVE:</span>
+                        <div class="auto-content" id="mostActiveAuto">
+                            <span class="placeholder-small">-</span>
+                        </div>
+                        <div class="edit-content editable" contenteditable="false" data-placeholder="Top platform"></div>
+                    </div>
+
+                    <div class="sidebar-item">
+                        <span class="sidebar-label">AI PLATFORMS USED:</span>
+                        <div class="auto-content" id="platformsAuto">
+                            <span class="placeholder-small">-</span>
+                        </div>
+                        <div class="edit-content editable" contenteditable="false" data-placeholder="Which AI assistants"></div>
+                    </div>
+
+                    <div class="sidebar-item">
+                        <span class="sidebar-label">TOOLS DEPLOYED:</span>
+                        <div class="auto-content" id="toolsAuto">
+                            <span class="placeholder-small">-</span>
+                        </div>
+                        <div class="edit-content editable" contenteditable="false" data-placeholder="Code, search, etc."></div>
+                    </div>
+
+                    <div class="sidebar-item">
+                        <span class="sidebar-label">PEAK HOUR:</span>
+                        <div class="auto-content" id="peakHourAuto">
+                            <span class="placeholder-small">-</span>
+                        </div>
+                        <div class="edit-content editable" contenteditable="false" data-placeholder="Most active time"></div>
+                    </div>
+                </aside>
+            </div>
+
+            <div class="ornament">&#9670; &#10070; &#9670;</div>
+
+            <div class="section-header">SYSTEM BUILDING JOURNAL</div>
+
+            <article class="article">
+                <h2 class="article-title">Workflow Evolution & Framework Development</h2>
+                <div class="article-content" id="journalContent">
+                    <div class="auto-content" id="journalAuto">
+                        <p class="placeholder">Longest conversation summary will appear here...</p>
+                    </div>
+                    <div class="edit-content editable" contenteditable="false" data-placeholder="Deep dive into today's system work. What frameworks did you enhance? How did Claudework, metadata systems, or your 5-AI coordination evolve? What made you say 'Claude IS how I work' today?"></div>
+                </div>
+            </article>
+
+            <div class="quote-box">
+                <div class="auto-content" id="quoteAuto">
+                    <p class="quote-placeholder">Today's notable AI insight will appear here...</p>
+                </div>
+                <div class="edit-content editable" contenteditable="false" data-placeholder="Today's insight or quote - something you discovered, a breakthrough moment, or a reminder to yourself" style="position: relative; z-index: 1;"></div>
+            </div>
+
+            <div class="section-header">CONVERSATION LOG</div>
+
+            <div class="conversation-log" id="conversationLog">
+                <p class="placeholder">Detailed conversation entries will appear here...</p>
+            </div>
+
+            <div class="section-header">TOMORROW'S AGENDA</div>
+
+            <div class="three-column">
+                <div class="article">
+                    <h3 class="article-title" style="font-size: 1.2em;">Priority Tasks</h3>
+                    <div class="article-content editable" contenteditable="false" data-placeholder="Top 3 things to tackle"></div>
+                </div>
+
+                <div class="article">
+                    <h3 class="article-title" style="font-size: 1.2em;">System Goals</h3>
+                    <div class="article-content editable" contenteditable="false" data-placeholder="What to build or refine"></div>
+                </div>
+
+                <div class="article">
+                    <h3 class="article-title" style="font-size: 1.2em;">Focus Area</h3>
+                    <div class="article-content editable" contenteditable="false" data-placeholder="Main project or theme"></div>
+                </div>
+            </div>
+
+            <div class="ornament">&#9733; &#9670; &#9733;</div>
+
+            <div class="btn-container">
+                <button class="btn" onclick="saveToLocalStorage()">SAVE TODAY'S EDITION</button>
+                <button class="btn" onclick="loadFromLocalStorage()">LOAD SAVED EDITION</button>
+                <button class="btn" onclick="clearAll()">START FRESH</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="chronicle.js"></script>
+</body>
+</html>

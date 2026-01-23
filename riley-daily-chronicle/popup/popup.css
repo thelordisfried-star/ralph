@@ -1,0 +1,322 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Cormorant+Garamond:wght@300;400;600&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Cormorant Garamond', serif;
+    background: linear-gradient(to bottom, #f4ecd8 0%, #ebe3d0 100%);
+    color: #2a2a2a;
+    min-width: 320px;
+    min-height: 400px;
+}
+
+.popup-container {
+    padding: 15px;
+    position: relative;
+}
+
+.popup-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 8px;
+    background: repeating-linear-gradient(
+        90deg,
+        #8b7355 0px,
+        #8b7355 5px,
+        #d4af37 5px,
+        #d4af37 10px,
+        #000 10px,
+        #000 15px
+    );
+}
+
+.popup-header {
+    text-align: center;
+    padding: 15px 10px 10px;
+    border-bottom: 2px double #8b7355;
+    margin-bottom: 15px;
+    position: relative;
+}
+
+.popup-header::after {
+    content: '◆';
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #ebe3d0;
+    padding: 0 10px;
+    color: #d4af37;
+    font-size: 14px;
+}
+
+.popup-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4em;
+    font-weight: 900;
+    letter-spacing: 3px;
+    color: #1a1a1a;
+    text-shadow: 1px 1px 0px #d4af37;
+    margin-bottom: 5px;
+}
+
+.popup-subtitle {
+    font-size: 0.9em;
+    letter-spacing: 1px;
+    color: #8b7355;
+    font-style: italic;
+}
+
+.popup-date {
+    font-size: 0.85em;
+    color: #2a2a2a;
+    margin-top: 5px;
+    letter-spacing: 1px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.stat-box {
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(139, 115, 85, 0.2) 100%);
+    padding: 10px 5px;
+    text-align: center;
+    border: 1px solid #d4af37;
+    border-radius: 3px;
+}
+
+.stat-value {
+    display: block;
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5em;
+    font-weight: 700;
+    color: #1a1a1a;
+}
+
+.stat-label {
+    display: block;
+    font-size: 0.75em;
+    color: #8b7355;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+}
+
+.section {
+    margin-bottom: 15px;
+}
+
+.section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.9em;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #1a1a1a;
+    text-align: center;
+    margin-bottom: 10px;
+    padding: 5px;
+    background: linear-gradient(135deg, #d4af37 0%, #f4d03f 100%);
+    clip-path: polygon(5px 0, 100% 0, calc(100% - 5px) 100%, 0 100%);
+}
+
+.platform-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.platform-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.platform-name {
+    width: 70px;
+    font-size: 0.85em;
+    color: #2a2a2a;
+    font-weight: 600;
+}
+
+.platform-bar-container {
+    flex: 1;
+    height: 14px;
+    background: rgba(139, 115, 85, 0.2);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.platform-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #d4af37, #8b7355);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+.platform-count {
+    width: 25px;
+    font-size: 0.85em;
+    font-weight: 600;
+    text-align: right;
+    color: #1a1a1a;
+}
+
+.time-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.time-slot {
+    text-align: center;
+    padding: 8px;
+    background: rgba(139, 115, 85, 0.1);
+    border: 1px solid #8b7355;
+    border-radius: 3px;
+}
+
+.time-icon {
+    display: block;
+    font-size: 1.2em;
+    margin-bottom: 3px;
+}
+
+.time-label {
+    display: block;
+    font-size: 0.75em;
+    color: #8b7355;
+    letter-spacing: 0.5px;
+}
+
+.time-value {
+    display: block;
+    font-family: 'Playfair Display', serif;
+    font-size: 1.2em;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-top: 2px;
+}
+
+.highlights {
+    background: rgba(212, 175, 55, 0.1);
+    padding: 10px;
+    border: 1px solid #d4af37;
+    border-radius: 3px;
+}
+
+.highlight-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px dotted #d4af37;
+}
+
+.highlight-item:last-child {
+    border-bottom: none;
+}
+
+.highlight-label {
+    font-size: 0.85em;
+    color: #8b7355;
+}
+
+.highlight-value {
+    font-size: 0.85em;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.button-group {
+    display: flex;
+    gap: 8px;
+    margin-top: 15px;
+}
+
+.btn {
+    flex: 1;
+    padding: 10px 15px;
+    font-family: 'Playfair Display', serif;
+    font-size: 0.85em;
+    font-weight: 600;
+    letter-spacing: 1px;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.2s;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #d4af37 0%, #f4d03f 100%);
+    border: 2px solid #8b7355;
+    color: #1a1a1a;
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+}
+
+.btn-secondary {
+    background: transparent;
+    border: 2px solid #8b7355;
+    color: #8b7355;
+}
+
+.btn-secondary:hover {
+    background: rgba(139, 115, 85, 0.1);
+}
+
+.popup-footer {
+    text-align: center;
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px solid #d4af37;
+}
+
+.footer-ornament {
+    color: #d4af37;
+    font-size: 0.9em;
+    letter-spacing: 5px;
+}
+
+/* Loading state */
+.loading .stat-value,
+.loading .time-value,
+.loading .highlight-value {
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Platform-specific colors */
+.platform-bar[data-platform="claude"] .platform-bar-fill {
+    background: linear-gradient(90deg, #da7756, #c45a38);
+}
+
+.platform-bar[data-platform="chatgpt"] .platform-bar-fill {
+    background: linear-gradient(90deg, #74aa9c, #10a37f);
+}
+
+.platform-bar[data-platform="grok"] .platform-bar-fill {
+    background: linear-gradient(90deg, #1da1f2, #0d8bd9);
+}
+
+.platform-bar[data-platform="gemini"] .platform-bar-fill {
+    background: linear-gradient(90deg, #8b5cf6, #4f46e5);
+}
+
+.platform-bar[data-platform="copilot"] .platform-bar-fill {
+    background: linear-gradient(90deg, #0078d4, #005a9e);
+}
