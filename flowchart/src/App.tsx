@@ -28,12 +28,11 @@ const nodeHeight = 70;
 type Phase = 'setup' | 'loop' | 'decision' | 'done';
 
 const phaseColors: Record<Phase, { bg: string; border: string }> = {
-  setup: { bg: '#f0f7ff', border: '#4a90d9' },
-  loop: { bg: '#f5f5f5', border: '#666666' },
-  decision: { bg: '#fff8e6', border: '#c9a227' },
-  done: { bg: '#f0fff4', border: '#38a169' },
+  setup: { bg: '#ffffff', border: '#000000' },
+  loop: { bg: '#ffffff', border: '#000000' },
+  decision: { bg: '#ffffff', border: '#000000' },
+  done: { bg: '#ffffff', border: '#000000' },
 };
-
 const allSteps: { id: string; label: string; description: string; phase: Phase }[] = [
   // Setup phase (vertical)
   { id: '1', label: 'You write a PRD', description: 'Define what you want to build', phase: 'setup' },
@@ -55,7 +54,7 @@ const notes = [
     id: 'note-1',
     appearsWithStep: 2,
     position: { x: 340, y: 100 },
-    color: { bg: '#f5f0ff', border: '#8b5cf6' },
+    color: { bg: '#ffffff', border: '#000000' },
     content: `{
   "id": "US-001",
   "title": "Add priority field to database",
@@ -71,7 +70,7 @@ const notes = [
     id: 'note-2',
     appearsWithStep: 8,
     position: { x: 480, y: 620 },
-    color: { bg: '#fdf4f0', border: '#c97a50' },
+    color: { bg: '#ffffff', border: '#000000' },
     content: `Also updates AGENTS.md with
 patterns discovered, so future
 iterations learn from this one.`,
@@ -81,11 +80,11 @@ iterations learn from this one.`,
 function CustomNode({ data }: { data: { title: string; description: string; phase: Phase } }) {
   const colors = phaseColors[data.phase];
   return (
-    <div 
+    <div
       className="custom-node"
-      style={{ 
-        backgroundColor: colors.bg, 
-        borderColor: colors.border 
+      style={{
+        backgroundColor: colors.bg,
+        borderColor: colors.border
       }}
     >
       <Handle type="target" position={Position.Top} id="top" />
@@ -106,7 +105,7 @@ function CustomNode({ data }: { data: { title: string; description: string; phas
 
 function NoteNode({ data }: { data: { content: string; color: { bg: string; border: string } } }) {
   return (
-    <div 
+    <div
       className="note-node"
       style={{
         backgroundColor: data.color.bg,
@@ -323,12 +322,31 @@ function App() {
   }, [setNodes, setEdges]);
 
   return (
-    <div className="app-container">
-      <div className="header">
-        <h1>How Ralph Works with Amp</h1>
-        <p>Autonomous AI agent loop for completing PRDs</p>
+    <div className="notepad-window">
+      {/* Title Bar */}
+      <div className="title-bar">
+        <div className="title-text">
+          <img src="/vite.svg" alt="" style={{ height: 12, marginRight: 4, verticalAlign: 'middle' }} />
+          Untitled - Notepad
+        </div>
+        <div className="title-controls">
+          <div className="title-btn" onClick={() => { }}>_</div>
+          <div className="title-btn" onClick={() => { }}>□</div>
+          <div className="title-btn" onClick={() => { }}>X</div>
+        </div>
       </div>
-      <div className="flow-container">
+
+      {/* Menu Bar */}
+      <div className="menu-bar">
+        <div className="menu-item">File</div>
+        <div className="menu-item">Edit</div>
+        <div className="menu-item">Format</div>
+        <div className="menu-item">View</div>
+        <div className="menu-item">Help</div>
+      </div>
+
+      {/* Main Text Area (Flow) */}
+      <div className="text-area-container">
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -354,23 +372,31 @@ function App() {
           <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#ddd" />
           <Controls showInteractive={false} />
         </ReactFlow>
+
+        {/* Overlay Controls (Styled as bottom toolbar) */}
+        <div className="controls" style={{ position: 'absolute', bottom: 10, right: 20, background: '#c0c0c0', padding: 4, border: '2px outset white', display: 'flex' }}>
+          <button onClick={handlePrev} disabled={visibleCount <= 1}>
+            &lt; Prev
+          </button>
+          <span className="step-counter" style={{ padding: '0 8px', display: 'flex', alignItems: 'center' }}>
+            Step {visibleCount}/{allSteps.length}
+          </span>
+          <button onClick={handleNext} disabled={visibleCount >= allSteps.length}>
+            Next &gt;
+          </button>
+          <button onClick={handleReset} className="reset-btn">
+            Reset
+          </button>
+        </div>
       </div>
-      <div className="controls">
-        <button onClick={handlePrev} disabled={visibleCount <= 1}>
-          Previous
-        </button>
-        <span className="step-counter">
-          Step {visibleCount} of {allSteps.length}
-        </span>
-        <button onClick={handleNext} disabled={visibleCount >= allSteps.length}>
-          Next
-        </button>
-        <button onClick={handleReset} className="reset-btn">
-          Reset
-        </button>
-      </div>
-      <div className="instructions">
-        Click Next to reveal each step
+
+      {/* Status Bar */}
+      <div className="status-bar">
+        <div className="status-main"></div>
+        <div className="status-item" style={{ minWidth: 100 }}>Ln 1, Col 1</div>
+        <div className="status-item">100%</div>
+        <div className="status-item">Windows (CRLF)</div>
+        <div className="status-item">UTF-8</div>
       </div>
     </div>
   );
