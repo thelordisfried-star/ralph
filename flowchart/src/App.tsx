@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef } from 'react';
+import { useCallback, useState, useRef, memo } from 'react';
 import type { Node, Edge, NodeChange, EdgeChange, Connection } from '@xyflow/react';
 import {
   ReactFlow,
@@ -33,7 +33,8 @@ const phaseColors: Record<Phase, { bg: string; border: string }> = {
   decision: { bg: '#ffffff', border: '#000000' },
   done: { bg: '#ffffff', border: '#000000' },
 };
-const allSteps: { id: string; label: string; description: string; phase: Phase }[] = [
+
+const rawSteps: { id: string; label: string; description: string; phase: Phase }[] = [
   // Setup phase (vertical)
   { id: '1', label: 'You write a PRD', description: 'Define what you want to build', phase: 'setup' },
   { id: '2', label: 'Convert to prd.json', description: 'Break into small user stories', phase: 'setup' },
@@ -49,7 +50,17 @@ const allSteps: { id: string; label: string; description: string; phase: Phase }
   { id: '10', label: 'Done!', description: 'All stories complete', phase: 'done' },
 ];
 
-const notes = [
+// Pre-calculate data objects to ensure referential stability
+const allSteps = rawSteps.map(step => ({
+  ...step,
+  data: {
+    title: step.label,
+    description: step.description,
+    phase: step.phase,
+  }
+}));
+
+const rawNotes = [
   {
     id: 'note-1',
     appearsWithStep: 2,
@@ -77,7 +88,16 @@ iterations learn from this one.`,
   },
 ];
 
-function CustomNode({ data }: { data: { title: string; description: string; phase: Phase } }) {
+// Pre-calculate data for notes
+const notes = rawNotes.map(note => ({
+  ...note,
+  data: {
+    content: note.content,
+    color: note.color,
+  }
+}));
+
+const CustomNode = memo(function CustomNode({ data }: { data: { title: string; description: string; phase: Phase } }) {
   const colors = phaseColors[data.phase];
   return (
     <div
@@ -101,9 +121,9 @@ function CustomNode({ data }: { data: { title: string; description: string; phas
       </div>
     </div>
   );
-}
+});
 
-function NoteNode({ data }: { data: { content: string; color: { bg: string; border: string } } }) {
+const NoteNode = memo(function NoteNode({ data }: { data: { content: string; color: { bg: string; border: string } } }) {
   return (
     <div
       className="note-node"
@@ -115,7 +135,7 @@ function NoteNode({ data }: { data: { content: string; color: { bg: string; bord
       <pre>{data.content}</pre>
     </div>
   );
-}
+});
 
 const nodeTypes = { custom: CustomNode, note: NoteNode };
 
@@ -158,11 +178,7 @@ function createNode(step: typeof allSteps[0], visible: boolean, position?: { x: 
     id: step.id,
     type: 'custom',
     position: position || positions[step.id],
-    data: {
-      title: step.label,
-      description: step.description,
-      phase: step.phase,
-    },
+    data: step.data,
     style: {
       width: nodeWidth,
       height: nodeHeight,
@@ -212,7 +228,7 @@ function createNoteNode(note: typeof notes[0], visible: boolean, position?: { x:
     id: note.id,
     type: 'note',
     position: position || positions[note.id],
-    data: { content: note.content, color: note.color },
+    data: note.data,
     style: {
       opacity: visible ? 1 : 0,
       transition: 'opacity 0.5s ease-in-out',
@@ -228,18 +244,20 @@ function App() {
   const [visibleCount, setVisibleCount] = useState(1);
   const nodePositions = useRef<{ [key: string]: { x: number; y: number } }>({ ...positions });
 
-  const getNodes = (count: number) => {
+  // Modified to accept positions explicitly, avoiding ref access during render
+  const getNodes = (count: number, currentPositions: { [key: string]: { x: number; y: number } }) => {
     const stepNodes = allSteps.map((step, index) =>
-      createNode(step, index < count, nodePositions.current[step.id])
+      createNode(step, index < count, currentPositions[step.id])
     );
     const noteNodes = notes.map(note => {
       const noteVisible = count >= note.appearsWithStep;
-      return createNoteNode(note, noteVisible, nodePositions.current[note.id]);
+      return createNoteNode(note, noteVisible, currentPositions[note.id]);
     });
     return [...stepNodes, ...noteNodes];
   };
 
-  const initialNodes = getNodes(1);
+  // Pass static 'positions' to avoid accessing ref during render
+  const initialNodes = getNodes(1, positions);
   const initialEdges = edgeConnections.map((conn, index) =>
     createEdge(conn, index < 0)
   );
@@ -291,7 +309,8 @@ function App() {
       const newCount = visibleCount + 1;
       setVisibleCount(newCount);
 
-      setNodes(getNodes(newCount));
+      // Use current positions from ref
+      setNodes(getNodes(newCount, nodePositions.current));
       setEdges(
         edgeConnections.map((conn) =>
           createEdge(conn, getEdgeVisibility(conn, newCount))
@@ -305,7 +324,8 @@ function App() {
       const newCount = visibleCount - 1;
       setVisibleCount(newCount);
 
-      setNodes(getNodes(newCount));
+      // Use current positions from ref
+      setNodes(getNodes(newCount, nodePositions.current));
       setEdges(
         edgeConnections.map((conn) =>
           createEdge(conn, getEdgeVisibility(conn, newCount))
@@ -317,7 +337,8 @@ function App() {
   const handleReset = useCallback(() => {
     setVisibleCount(1);
     nodePositions.current = { ...positions };
-    setNodes(getNodes(1));
+    // Pass positions directly as we just reset the ref
+    setNodes(getNodes(1, positions));
     setEdges(edgeConnections.map((conn, index) => createEdge(conn, index < 0)));
   }, [setNodes, setEdges]);
 
