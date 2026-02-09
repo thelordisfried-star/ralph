@@ -13,6 +13,7 @@ Based on [Geoffrey Huntley's Ralph pattern](https://ghuntley.com/ralph/).
 - [Amp CLI](https://ampcode.com) installed and authenticated
 - `jq` installed (`brew install jq` on macOS)
 - A git repository for your project
+- Chrome or Chromium (optional, for `--chrome` browser testing)
 
 ## Setup
 
@@ -79,6 +80,18 @@ This creates `prd.json` with user stories structured for autonomous execution.
 
 Default is 10 iterations.
 
+#### With Chrome (recommended for UI work)
+
+```bash
+./scripts/ralph/ralph.sh --chrome http://localhost:3000
+```
+
+This launches Chrome with remote debugging enabled. Ralph's iterations can then use the browser to verify UI changes via the Chrome DevTools Protocol. Chrome is automatically stopped when Ralph exits.
+
+Options:
+- `--chrome [url]` - Launch Chrome, optionally opening a URL
+- `--chrome-port <port>` - Set the CDP debug port (default: 9222)
+
 Ralph will:
 1. Create a feature branch (from PRD `branchName`)
 2. Pick the highest priority story where `passes: false`
@@ -95,11 +108,13 @@ Ralph will:
 |------|---------|
 | `ralph.sh` | The bash loop that spawns fresh Amp instances |
 | `prompt.md` | Instructions given to each Amp instance |
+| `chrome.sh` | Chrome browser management (launch, screenshot, navigate) |
 | `prd.json` | User stories with `passes` status (the task list) |
 | `prd.json.example` | Example PRD format for reference |
 | `progress.txt` | Append-only learnings for future iterations |
 | `skills/prd/` | Skill for generating PRDs |
 | `skills/ralph/` | Skill for converting PRDs to JSON |
+| `skills/dev-browser/` | Skill for browser testing via Chrome DevTools Protocol |
 | `flowchart/` | Interactive visualization of how Ralph works |
 
 ## Flowchart
@@ -159,6 +174,22 @@ Ralph only works if there are feedback loops:
 ### Browser Verification for UI Stories
 
 Frontend stories must include "Verify in browser using dev-browser skill" in acceptance criteria. Ralph will use the dev-browser skill to navigate to the page, interact with the UI, and confirm changes work.
+
+When running with `--chrome`, Ralph launches a Chrome instance with remote debugging and exposes it to each Amp iteration via the `RALPH_CHROME` and `RALPH_CHROME_PORT` environment variables. The `chrome.sh` helper provides commands for navigation, screenshots, and CDP inspection.
+
+```bash
+# Check Chrome status
+./chrome.sh status
+
+# Navigate to a page
+./chrome.sh navigate http://localhost:3000/dashboard
+
+# Take a screenshot
+./chrome.sh screenshot verify.png
+
+# Get CDP info
+./chrome.sh info
+```
 
 ### Stop Condition
 

@@ -41,3 +41,13 @@ npm run dev
 - Memory persists via git history, `progress.txt`, and `prd.json`
 - Stories should be small enough to complete in one context window
 - Always update AGENTS.md with discovered patterns for future iterations
+
+## Chrome Integration
+
+- `--chrome [url]` flag on `ralph.sh` launches Chrome with remote debugging via CDP
+- `chrome.sh` manages Chrome lifecycle: `launch`, `stop`, `navigate`, `screenshot`, `status`, `info`
+- When Chrome is active, `RALPH_CHROME=true` and `RALPH_CHROME_PORT` are set as environment variables
+- Chrome is automatically cleaned up when Ralph exits (via bash trap)
+- The `skills/dev-browser/` skill documents how to use Chrome for browser verification
+- Screenshots can be taken via `./chrome.sh screenshot <file.png>` and referenced in progress logs
+- CDP endpoint at `http://localhost:${RALPH_CHROME_PORT:-9222}` supports direct DevTools Protocol access

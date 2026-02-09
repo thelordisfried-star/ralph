@@ -82,7 +82,18 @@ Only update AGENTS.md if you have **genuinely reusable knowledge** that would he
 
 ## Browser Testing (Required for Frontend Stories)
 
-For any story that changes UI, you MUST verify it works in the browser:
+For any story that changes UI, you MUST verify it works in the browser.
+
+### When Chrome is available (`RALPH_CHROME=true`)
+
+Ralph's built-in Chrome integration provides a browser via Chrome DevTools Protocol:
+
+1. Use `./chrome.sh navigate <url>` to open the relevant page
+2. Use `./chrome.sh screenshot <file.png>` to capture the page
+3. Use the CDP endpoint at `http://localhost:${RALPH_CHROME_PORT:-9222}` for DOM inspection
+4. Load the `dev-browser` skill for detailed instructions
+
+### When Chrome is not available
 
 1. Load the `dev-browser` skill
 2. Navigate to the relevant page
