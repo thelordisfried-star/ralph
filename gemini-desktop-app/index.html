@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;" />
+  <title>Gemini Desktop</title>
+  <style>
+    /* ── Reset & Variables ──────────────────────────────────────────────── */
+    :root {
+      --bg-primary: #1a1a2e;
+      --bg-secondary: #16213e;
+      --bg-tertiary: #0f3460;
+      --bg-input: #1a1a2e;
+      --text-primary: #e4e4e7;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --accent: #4285f4;
+      --accent-hover: #5a9bff;
+      --accent-secondary: #34a853;
+      --user-bubble: #4285f4;
+      --model-bubble: #242438;
+      --border: #2a2a3e;
+      --danger: #ea4335;
+      --danger-hover: #ff5545;
+      --scrollbar: #3a3a4e;
+      --shadow: rgba(0, 0, 0, 0.3);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --transition: 0.2s ease;
+    }
+
+    .theme-light {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f8f9fa;
+      --bg-tertiary: #e8eaed;
+      --bg-input: #ffffff;
+      --text-primary: #202124;
+      --text-secondary: #5f6368;
+      --text-muted: #9aa0a6;
+      --model-bubble: #f1f3f4;
+      --border: #dadce0;
+      --scrollbar: #c1c1c1;
+      --shadow: rgba(0, 0, 0, 0.1);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* ── Title Bar ──────────────────────────────────────────────────────── */
+    .titlebar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 38px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      -webkit-app-region: drag;
+      padding: 0 8px;
+      flex-shrink: 0;
+    }
+
+    .titlebar-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .titlebar-logo {
+      width: 18px;
+      height: 18px;
+      background: linear-gradient(135deg, #4285f4, #34a853, #fbbc05, #ea4335);
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .titlebar-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .titlebar-controls {
+      display: flex;
+      gap: 2px;
+      -webkit-app-region: no-drag;
+    }
+
+    .titlebar-btn {
+      width: 30px;
+      height: 26px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      font-size: 16px;
+      transition: background var(--transition);
+    }
+
+    .titlebar-btn:hover {
+      background: var(--border);
+    }
+
+    .titlebar-btn.close:hover {
+      background: var(--danger);
+      color: white;
+    }
+
+    /* ── Layout ─────────────────────────────────────────────────────────── */
+    .app-container {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── Sidebar ────────────────────────────────────────────────────────── */
+    .sidebar {
+      width: 260px;
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      transition: transform var(--transition), width var(--transition);
+    }
+
+    .sidebar.collapsed {
+      width: 0;
+      overflow: hidden;
+      border-right: none;
+    }
+
+    .sidebar-header {
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn {
+      padding: 8px 14px;
+      border: 1px solid var(--border);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 13px;
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn:hover {
+      background: var(--bg-tertiary);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+      flex: 1;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+    }
+
+    .btn-icon {
+      padding: 8px;
+      min-width: 36px;
+      justify-content: center;
+    }
+
+    .sidebar-conversations {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+
+    .conversation-item {
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      margin-bottom: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: background var(--transition);
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .conversation-item:hover {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+    }
+
+    .conversation-item.active {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+
+    .conversation-item .conv-title {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .conversation-item .conv-delete {
+      opacity: 0;
+      border: none;
+      background: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 14px;
+      transition: all var(--transition);
+    }
+
+    .conversation-item:hover .conv-delete {
+      opacity: 1;
+    }
+
+    .conversation-item .conv-delete:hover {
+      color: var(--danger);
+      background: rgba(234, 67, 53, 0.1);
+    }
+
+    .sidebar-footer {
+      padding: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    .sidebar-footer .btn {
+      width: 100%;
+      justify-content: center;
+    }
+
+    /* ── Main chat area ─────────────────────────────────────────────────── */
+    .main-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    /* ── Toolbar ────────────────────────────────────────────────────────── */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-secondary);
+      flex-shrink: 0;
+    }
+
+    .toolbar .btn-toggle-sidebar {
+      font-size: 18px;
+    }
+
+    .toolbar .model-selector {
+      padding: 6px 10px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 12px;
+      cursor: pointer;
+      outline: none;
+    }
+
+    .toolbar .model-selector:focus {
+      border-color: var(--accent);
+    }
+
+    .toolbar-spacer {
+      flex: 1;
+    }
+
+    .toolbar .status-indicator {
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent-secondary);
+    }
+
+    .status-dot.disconnected {
+      background: var(--danger);
+    }
+
+    /* ── Chat messages ──────────────────────────────────────────────────── */
+    .chat-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .chat-area::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .chat-area::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .chat-area::-webkit-scrollbar-thumb {
+      background: var(--scrollbar);
+      border-radius: 3px;
+    }
+
+    .welcome-screen {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      text-align: center;
+      padding: 40px;
+    }
+
+    .welcome-logo {
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, #4285f4, #34a853, #fbbc05, #ea4335);
+      border-radius: 50%;
+    }
+
+    .welcome-title {
+      font-size: 22px;
+      font-weight: 600;
+    }
+
+    .welcome-subtitle {
+      font-size: 14px;
+      color: var(--text-secondary);
+      max-width: 360px;
+      line-height: 1.5;
+    }
+
+    .quick-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .quick-action {
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all var(--transition);
+      text-align: left;
+      line-height: 1.4;
+    }
+
+    .quick-action:hover {
+      border-color: var(--accent);
+      color: var(--text-primary);
+      background: var(--bg-tertiary);
+    }
+
+    .quick-action .qa-icon {
+      font-size: 18px;
+      margin-bottom: 4px;
+      display: block;
+    }
+
+    .message {
+      display: flex;
+      gap: 10px;
+      max-width: 100%;
+      animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .message.user {
+      flex-direction: row-reverse;
+    }
+
+    .message-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .message.user .message-avatar {
+      background: var(--accent);
+      color: white;
+    }
+
+    .message.model .message-avatar {
+      background: linear-gradient(135deg, #4285f4, #34a853);
+      color: white;
+    }
+
+    .message-content {
+      padding: 10px 14px;
+      border-radius: var(--radius);
+      max-width: 80%;
+      font-size: 14px;
+      line-height: 1.6;
+      user-select: text;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+
+    .message.user .message-content {
+      background: var(--user-bubble);
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+
+    .message.model .message-content {
+      background: var(--model-bubble);
+      color: var(--text-primary);
+      border-bottom-left-radius: 4px;
+    }
+
+    .message-content img {
+      max-width: 100%;
+      border-radius: var(--radius-sm);
+      margin: 8px 0;
+    }
+
+    .message-content pre {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      overflow-x: auto;
+      margin: 8px 0;
+      font-size: 13px;
+    }
+
+    .message-content code {
+      font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+      font-size: 13px;
+    }
+
+    .message-content p code {
+      background: rgba(0, 0, 0, 0.2);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .message-content p {
+      margin-bottom: 8px;
+    }
+
+    .message-content p:last-child {
+      margin-bottom: 0;
+    }
+
+    .message-content ul, .message-content ol {
+      margin: 8px 0;
+      padding-left: 20px;
+    }
+
+    .message-content li {
+      margin-bottom: 4px;
+    }
+
+    .message-content blockquote {
+      border-left: 3px solid var(--accent);
+      margin: 8px 0;
+      padding: 4px 12px;
+      color: var(--text-secondary);
+    }
+
+    .message-content h1, .message-content h2, .message-content h3 {
+      margin: 12px 0 8px;
+    }
+
+    .message-content h1 { font-size: 18px; }
+    .message-content h2 { font-size: 16px; }
+    .message-content h3 { font-size: 15px; }
+
+    .message-content table {
+      border-collapse: collapse;
+      margin: 8px 0;
+      width: 100%;
+    }
+
+    .message-content th, .message-content td {
+      border: 1px solid var(--border);
+      padding: 6px 10px;
+      font-size: 13px;
+      text-align: left;
+    }
+
+    .message-content th {
+      background: var(--bg-tertiary);
+    }
+
+    .message-error {
+      color: var(--danger);
+      font-style: italic;
+    }
+
+    .typing-indicator {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .typing-dots {
+      display: flex;
+      gap: 4px;
+    }
+
+    .typing-dots span {
+      width: 6px;
+      height: 6px;
+      background: var(--text-muted);
+      border-radius: 50%;
+      animation: bounce 1.4s infinite ease-in-out;
+    }
+
+    .typing-dots span:nth-child(1) { animation-delay: -0.32s; }
+    .typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0); }
+      40% { transform: scale(1); }
+    }
+
+    /* ── Input area ─────────────────────────────────────────────────────── */
+    .input-area {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      background: var(--bg-secondary);
+      flex-shrink: 0;
+    }
+
+    .input-actions {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 8px;
+    }
+
+    .input-action-btn {
+      padding: 4px 10px;
+      border: 1px solid var(--border);
+      background: var(--bg-primary);
+      color: var(--text-secondary);
+      border-radius: 16px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .input-action-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+    }
+
+    .input-wrapper {
+      flex: 1;
+      position: relative;
+    }
+
+    #chat-input {
+      width: 100%;
+      min-height: 42px;
+      max-height: 150px;
+      padding: 10px 14px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-primary);
+      font-size: 14px;
+      font-family: inherit;
+      resize: none;
+      outline: none;
+      transition: border-color var(--transition);
+      line-height: 1.5;
+    }
+
+    #chat-input:focus {
+      border-color: var(--accent);
+    }
+
+    #chat-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .send-btn {
+      width: 42px;
+      height: 42px;
+      border: none;
+      background: var(--accent);
+      color: white;
+      border-radius: var(--radius);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      transition: background var(--transition);
+      flex-shrink: 0;
+    }
+
+    .send-btn:hover {
+      background: var(--accent-hover);
+    }
+
+    .send-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .input-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      text-align: center;
+    }
+
+    /* ── Attached image preview ─────────────────────────────────────────── */
+    .attachment-preview {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      margin-bottom: 8px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+    }
+
+    .attachment-preview.visible {
+      display: flex;
+    }
+
+    .attachment-preview img {
+      width: 48px;
+      height: 48px;
+      border-radius: 6px;
+      object-fit: cover;
+    }
+
+    .attachment-preview .attachment-label {
+      flex: 1;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .attachment-preview .attachment-remove {
+      border: none;
+      background: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 16px;
+      padding: 4px;
+    }
+
+    .attachment-preview .attachment-remove:hover {
+      color: var(--danger);
+    }
+
+    /* ── Settings panel ─────────────────────────────────────────────────── */
+    .settings-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .settings-overlay.visible {
+      display: flex;
+    }
+
+    .settings-panel {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      width: 440px;
+      max-height: 80vh;
+      overflow-y: auto;
+      padding: 24px;
+      box-shadow: 0 20px 40px var(--shadow);
+    }
+
+    .settings-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .settings-header h2 {
+      font-size: 18px;
+    }
+
+    .settings-close {
+      border: none;
+      background: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 20px;
+      padding: 4px;
+    }
+
+    .settings-close:hover {
+      color: var(--text-primary);
+    }
+
+    .setting-group {
+      margin-bottom: 20px;
+    }
+
+    .setting-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+
+    .setting-group input[type="text"],
+    .setting-group input[type="password"],
+    .setting-group select {
+      width: 100%;
+      padding: 8px 12px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 14px;
+      outline: none;
+      transition: border-color var(--transition);
+    }
+
+    .setting-group input:focus,
+    .setting-group select:focus {
+      border-color: var(--accent);
+    }
+
+    .setting-group .setting-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+    }
+
+    .setting-row label {
+      margin-bottom: 0;
+    }
+
+    /* Toggle switch */
+    .toggle {
+      position: relative;
+      width: 40px;
+      height: 22px;
+    }
+
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      inset: 0;
+      background: var(--border);
+      border-radius: 11px;
+      cursor: pointer;
+      transition: background var(--transition);
+    }
+
+    .toggle-slider::before {
+      content: "";
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      left: 3px;
+      top: 3px;
+      background: white;
+      border-radius: 50%;
+      transition: transform var(--transition);
+    }
+
+    .toggle input:checked + .toggle-slider {
+      background: var(--accent);
+    }
+
+    .toggle input:checked + .toggle-slider::before {
+      transform: translateX(18px);
+    }
+
+    .settings-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── System prompt panel ────────────────────────────────────────────── */
+    .system-prompt-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .system-prompt-overlay.visible {
+      display: flex;
+    }
+
+    .system-prompt-panel {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      width: 480px;
+      padding: 24px;
+      box-shadow: 0 20px 40px var(--shadow);
+    }
+
+    .system-prompt-panel h2 {
+      font-size: 18px;
+      margin-bottom: 12px;
+    }
+
+    .system-prompt-panel textarea {
+      width: 100%;
+      height: 160px;
+      padding: 10px 14px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 13px;
+      font-family: inherit;
+      resize: vertical;
+      outline: none;
+      line-height: 1.5;
+    }
+
+    .system-prompt-panel textarea:focus {
+      border-color: var(--accent);
+    }
+
+    .system-prompt-presets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 12px 0;
+    }
+
+    .preset-btn {
+      padding: 4px 10px;
+      border: 1px solid var(--border);
+      background: var(--bg-primary);
+      color: var(--text-secondary);
+      border-radius: 16px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .preset-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ── Responsive ─────────────────────────────────────────────────────── */
+    @media (max-width: 600px) {
+      .sidebar {
+        position: absolute;
+        z-index: 50;
+        left: 0;
+        top: 38px;
+        bottom: 0;
+        width: 260px;
+        box-shadow: 4px 0 20px var(--shadow);
+      }
+
+      .sidebar.collapsed {
+        transform: translateX(-100%);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Title bar ──────────────────────────────────────────────────────── -->
+  <div class="titlebar">
+    <div class="titlebar-left">
+      <div class="titlebar-logo"></div>
+      <span class="titlebar-title">Gemini Desktop</span>
+    </div>
+    <div class="titlebar-controls">
+      <button class="titlebar-btn" id="btn-minimize" title="Minimize">&#x2013;</button>
+      <button class="titlebar-btn" id="btn-maximize" title="Maximize">&#x25A1;</button>
+      <button class="titlebar-btn close" id="btn-close" title="Close">&#x2715;</button>
+    </div>
+  </div>
+
+  <div class="app-container">
+    <!-- ── Sidebar ────────────────────────────────────────────────────── -->
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <button class="btn btn-primary" id="btn-new-chat">+ New Chat</button>
+        <button class="btn btn-icon" id="btn-system-prompt" title="System Prompt">&#9881;</button>
+      </div>
+      <div class="sidebar-conversations" id="conversation-list"></div>
+      <div class="sidebar-footer">
+        <button class="btn" id="btn-settings">&#9881; Settings</button>
+      </div>
+    </div>
+
+    <!-- ── Main area ──────────────────────────────────────────────────── -->
+    <div class="main-area">
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <button class="btn btn-icon btn-toggle-sidebar" id="btn-toggle-sidebar" title="Toggle sidebar">&#9776;</button>
+        <select class="model-selector" id="model-selector" title="Select model">
+          <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+          <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash-Lite</option>
+          <option value="gemini-2.5-pro-preview-05-06">Gemini 2.5 Pro</option>
+          <option value="gemini-2.5-flash-preview-04-17">Gemini 2.5 Flash</option>
+          <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+          <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+        </select>
+        <div class="toolbar-spacer"></div>
+        <div class="status-indicator">
+          <span class="status-dot" id="status-dot"></span>
+          <span id="status-text">Ready</span>
+        </div>
+      </div>
+
+      <!-- Chat area -->
+      <div class="chat-area" id="chat-area">
+        <div class="welcome-screen" id="welcome-screen">
+          <div class="welcome-logo"></div>
+          <div class="welcome-title">Gemini Desktop</div>
+          <div class="welcome-subtitle">
+            Your AI assistant, right on your desktop. Chat, analyze images, capture your screen, and more.
+          </div>
+          <div class="quick-actions">
+            <button class="quick-action" data-prompt="Summarize the text in my clipboard">
+              <span class="qa-icon">&#128203;</span>
+              Summarize clipboard
+            </button>
+            <button class="quick-action" data-prompt="Take a screenshot and describe what you see">
+              <span class="qa-icon">&#128247;</span>
+              Analyze screenshot
+            </button>
+            <button class="quick-action" data-prompt="Help me write a professional email about">
+              <span class="qa-icon">&#9993;</span>
+              Draft an email
+            </button>
+            <button class="quick-action" data-prompt="Explain this code:\n\n">
+              <span class="qa-icon">&#128187;</span>
+              Explain code
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Input area -->
+      <div class="input-area">
+        <div class="attachment-preview" id="attachment-preview">
+          <img id="attachment-img" src="" alt="attachment" />
+          <span class="attachment-label" id="attachment-label">Image attached</span>
+          <button class="attachment-remove" id="attachment-remove" title="Remove attachment">&#x2715;</button>
+        </div>
+        <div class="input-actions">
+          <button class="input-action-btn" id="btn-screenshot" title="Capture screenshot">&#128247; Screenshot</button>
+          <button class="input-action-btn" id="btn-clipboard" title="Paste from clipboard">&#128203; Clipboard</button>
+          <button class="input-action-btn" id="btn-upload-image" title="Upload image">&#128206; Image</button>
+        </div>
+        <div class="input-row">
+          <div class="input-wrapper">
+            <textarea id="chat-input" placeholder="Message Gemini..." rows="1"></textarea>
+          </div>
+          <button class="send-btn" id="btn-send" title="Send message">&#10148;</button>
+        </div>
+        <div class="input-hint">Press Enter to send, Shift+Enter for new line</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Settings overlay ───────────────────────────────────────────────── -->
+  <div class="settings-overlay" id="settings-overlay">
+    <div class="settings-panel">
+      <div class="settings-header">
+        <h2>Settings</h2>
+        <button class="settings-close" id="settings-close">&#x2715;</button>
+      </div>
+
+      <div class="setting-group">
+        <label>Gemini API Key</label>
+        <input type="password" id="setting-api-key" placeholder="Enter your Gemini API key" />
+        <div class="setting-hint">Get your key from Google AI Studio (aistudio.google.com)</div>
+      </div>
+
+      <div class="setting-group">
+        <label>Default Model</label>
+        <select id="setting-model">
+          <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+          <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash-Lite</option>
+          <option value="gemini-2.5-pro-preview-05-06">Gemini 2.5 Pro</option>
+          <option value="gemini-2.5-flash-preview-04-17">Gemini 2.5 Flash</option>
+          <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+          <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+        </select>
+      </div>
+
+      <div class="setting-group">
+        <label>Global Shortcut</label>
+        <input type="text" id="setting-shortcut" placeholder="e.g. CommandOrControl+Shift+G" />
+        <div class="setting-hint">Keyboard shortcut to toggle the window</div>
+      </div>
+
+      <div class="setting-group">
+        <label>Theme</label>
+        <select id="setting-theme">
+          <option value="dark">Dark</option>
+          <option value="light">Light</option>
+        </select>
+      </div>
+
+      <div class="setting-group">
+        <div class="setting-row">
+          <label>Always on top</label>
+          <label class="toggle">
+            <input type="checkbox" id="setting-always-on-top" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="setting-group">
+        <div class="setting-row">
+          <label>Start minimized</label>
+          <label class="toggle">
+            <input type="checkbox" id="setting-start-minimized" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="settings-actions">
+        <button class="btn" id="settings-cancel">Cancel</button>
+        <button class="btn btn-primary" id="settings-save">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── System prompt overlay ──────────────────────────────────────────── -->
+  <div class="system-prompt-overlay" id="system-prompt-overlay">
+    <div class="system-prompt-panel">
+      <div class="settings-header">
+        <h2>System Prompt</h2>
+        <button class="settings-close" id="system-prompt-close">&#x2715;</button>
+      </div>
+      <textarea id="system-prompt-text" placeholder="Enter a system prompt to customize Gemini's behavior..."></textarea>
+      <div class="system-prompt-presets">
+        <button class="preset-btn" data-preset="You are a helpful coding assistant. Provide concise, well-documented code examples.">Coder</button>
+        <button class="preset-btn" data-preset="You are a professional writer. Help with clear, engaging, and well-structured writing.">Writer</button>
+        <button class="preset-btn" data-preset="You are a research analyst. Provide thorough, well-sourced analysis with multiple perspectives.">Analyst</button>
+        <button class="preset-btn" data-preset="You are a language tutor. Help the user practice and learn languages with explanations and examples.">Tutor</button>
+        <button class="preset-btn" data-preset="You are a creative brainstorming partner. Generate innovative ideas and think outside the box.">Creative</button>
+      </div>
+      <div class="settings-actions">
+        <button class="btn" id="system-prompt-clear">Clear</button>
+        <button class="btn btn-primary" id="system-prompt-save">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden file input for image upload -->
+  <input type="file" id="file-input" accept="image/*" style="display: none;" />
+
+  <script src="renderer.js"></script>
+</body>
+</html>
