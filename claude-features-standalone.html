@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Features Explorer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+                'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #1a1a2e;
+        }
+
+        .app {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            padding: 3rem 2rem 2rem;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header-content {
+            max-width: 800px;
+            margin: 0 auto 2rem;
+        }
+
+        .title {
+            font-size: 3.5rem;
+            font-weight: 900;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #fff 0%, #f0f0ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.25rem;
+            color: rgba(255, 255, 255, 0.9);
+            line-height: 1.6;
+        }
+
+        .search-container {
+            position: relative;
+            max-width: 500px;
+            margin: 0 auto 2rem;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 1rem 3rem 1rem 1.5rem;
+            font-size: 1rem;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50px;
+            background: rgba(255, 255, 255, 0.95);
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.6);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        }
+
+        .search-icon {
+            position: absolute;
+            right: 1.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.25rem;
+        }
+
+        .categories {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .category-btn {
+            padding: 0.75rem 1.5rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .category-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .category-btn.active {
+            background: white;
+            border-color: white;
+        }
+
+        .constellation {
+            flex: 1;
+            padding: 3rem 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .feature-card {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 3px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: inline-block;
+        }
+
+        .feature-name {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+            color: #1a1a2e;
+        }
+
+        .feature-preview {
+            font-size: 0.95rem;
+            color: #666;
+            line-height: 1.5;
+            margin-bottom: 1rem;
+        }
+
+        .feature-category {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 1.5rem;
+            opacity: 0.6;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: white;
+        }
+
+        .no-results-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .modal-backdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 999;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-backdrop.active {
+            display: block;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 24px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal.active {
+            display: block;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            background: rgba(0, 0, 0, 0.1);
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            font-size: 1.25rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            background: rgba(0, 0, 0, 0.2);
+            transform: rotate(90deg);
+        }
+
+        .modal-header {
+            padding: 2.5rem 2.5rem 1.5rem;
+            text-align: center;
+            color: white;
+            border-radius: 24px 24px 0 0;
+        }
+
+        .modal-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .modal-title {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+        }
+
+        .modal-category {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            font-weight: 600;
+        }
+
+        .modal-content {
+            padding: 2rem 2.5rem;
+        }
+
+        .modal-section {
+            margin-bottom: 2rem;
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #1a1a2e;
+        }
+
+        .section-icon {
+            font-size: 1.5rem;
+        }
+
+        .section-text {
+            font-size: 1rem;
+            line-height: 1.7;
+            color: #444;
+        }
+
+        .why-text {
+            background: linear-gradient(135deg, #f6f8ff 0%, #fff4f8 100%);
+            padding: 1.25rem;
+            border-radius: 12px;
+            border-left: 4px solid #6366f1;
+            font-weight: 500;
+        }
+
+        .examples-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .examples-list li {
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.5rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 3px solid #6366f1;
+            font-size: 0.95rem;
+        }
+
+        .examples-list li::before {
+            content: '→';
+            margin-right: 0.75rem;
+            color: #6366f1;
+            font-weight: bold;
+        }
+
+        .modal-footer {
+            padding: 1.5rem 2.5rem 2.5rem;
+            text-align: center;
+        }
+
+        .try-button {
+            padding: 1rem 3rem;
+            font-size: 1rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 50px;
+            background: linear-gradient(135deg, #6366f1 0%, #6366f1 100%);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .try-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .footer {
+            padding: 2rem;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.2);
+            color: white;
+            backdrop-filter: blur(10px);
+        }
+
+        .footer p {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+
+        @media (max-width: 768px) {
+            .title {
+                font-size: 2.5rem;
+            }
+            .subtitle {
+                font-size: 1rem;
+            }
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app" id="app">
+        <header class="header">
+            <div class="header-content">
+                <h1 class="title">Discover Claude</h1>
+                <p class="subtitle">
+                    Explore what's possible with AI that understands context, writes code, and thinks alongside you
+                </p>
+            </div>
+
+            <div class="search-container">
+                <input
+                    type="text"
+                    id="searchInput"
+                    placeholder="Search features..."
+                    class="search-input"
+                />
+                <span class="search-icon">🔍</span>
+            </div>
+
+            <div class="categories" id="categories"></div>
+        </header>
+
+        <div class="constellation">
+            <div class="features-grid" id="featuresGrid"></div>
+            <div class="no-results" id="noResults" style="display: none;">
+                <div class="no-results-icon">🔭</div>
+                <p>No features found matching your search</p>
+            </div>
+        </div>
+
+        <div class="modal-backdrop" id="modalBackdrop"></div>
+        <div class="modal" id="modal"></div>
+
+        <footer class="footer">
+            <p>
+                <span style="font-size: 1.25rem; margin-right: 0.5rem;">✨</span>
+                Powered by Claude - Your AI partner for building, learning, and creating
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        const featureCategories = [
+            { id: 'code', name: 'Coding & Development', color: '#6366f1', emoji: '💻' },
+            { id: 'analysis', name: 'Analysis & Research', color: '#8b5cf6', emoji: '🔍' },
+            { id: 'creative', name: 'Creative & Writing', color: '#ec4899', emoji: '✨' },
+            { id: 'productivity', name: 'Productivity & Planning', color: '#14b8a6', emoji: '🎯' },
+            { id: 'advanced', name: 'Advanced Capabilities', color: '#f59e0b', emoji: '🚀' },
+        ];
+
+        const features = [
+            { id: 'code-generation', name: 'Code Generation', category: 'code', what: 'Write complete functions, classes, and even entire applications in any programming language', why: 'Save hours of typing and avoid boilerplate. Focus on architecture while Claude handles implementation details.', icon: '⚡', examples: ['Build a REST API', 'Create React components', 'Write database migrations'] },
+            { id: 'bug-fixing', name: 'Bug Detection & Fixing', category: 'code', what: 'Identify bugs in your code and provide fixes with detailed explanations', why: 'Spend less time debugging and more time building. Learn from each fix to become a better developer.', icon: '🐛', examples: ['Find race conditions', 'Fix memory leaks', 'Resolve type errors'] },
+            { id: 'code-review', name: 'Code Review', category: 'code', what: 'Get detailed feedback on code quality, security, and best practices', why: 'Improve code quality before it reaches production. Learn industry best practices from every review.', icon: '👀', examples: ['Security audits', 'Performance optimization', 'Clean code suggestions'] },
+            { id: 'refactoring', name: 'Code Refactoring', category: 'code', what: 'Restructure existing code to improve readability and maintainability', why: 'Keep your codebase healthy and scalable. Make future changes easier and reduce technical debt.', icon: '♻️', examples: ['Extract functions', 'Simplify logic', 'Update patterns'] },
+            { id: 'testing', name: 'Test Generation', category: 'code', what: 'Generate unit tests, integration tests, and test scenarios automatically', why: 'Increase code coverage without the tedium. Catch bugs before they reach users.', icon: '🧪', examples: ['Unit tests', 'E2E tests', 'Edge cases'] },
+            { id: 'documentation', name: 'Code Documentation', category: 'code', what: 'Generate clear documentation, comments, and README files', why: 'Make your code accessible to others (and your future self). Save time onboarding new team members.', icon: '📝', examples: ['API docs', 'Code comments', 'Architecture guides'] },
+            { id: 'data-analysis', name: 'Data Analysis', category: 'analysis', what: 'Analyze datasets, identify patterns, and generate insights from complex data', why: 'Turn raw data into actionable insights. Make data-driven decisions with confidence.', icon: '📊', examples: ['Trend analysis', 'Statistical summaries', 'Pattern detection'] },
+            { id: 'research', name: 'Research & Synthesis', category: 'analysis', what: 'Synthesize information from multiple sources and provide comprehensive summaries', why: 'Save hours of reading and research. Get to the key insights faster.', icon: '📚', examples: ['Literature reviews', 'Competitive analysis', 'Market research'] },
+            { id: 'problem-solving', name: 'Problem Solving', category: 'analysis', what: 'Break down complex problems into manageable steps with clear solutions', why: 'Tackle challenges systematically. Get unstuck when facing difficult problems.', icon: '🧩', examples: ['Algorithm design', 'System architecture', 'Debugging strategies'] },
+            { id: 'comparison', name: 'Comparison & Evaluation', category: 'analysis', what: 'Compare technologies, approaches, or solutions with pros/cons analysis', why: 'Make informed decisions faster. Understand tradeoffs before committing.', icon: '⚖️', examples: ['Tech stack selection', 'Tool comparisons', 'Approach evaluation'] },
+            { id: 'content-writing', name: 'Content Creation', category: 'creative', what: 'Write blog posts, articles, marketing copy, and other content', why: "Overcome writer's block and produce engaging content faster. Focus on ideas while Claude handles the prose.", icon: '✍️', examples: ['Blog posts', 'Marketing copy', 'Social media content'] },
+            { id: 'editing', name: 'Editing & Proofreading', category: 'creative', what: 'Improve grammar, clarity, and style in your writing', why: 'Polish your writing to professional standards. Communicate more effectively.', icon: '📖', examples: ['Grammar fixes', 'Clarity improvements', 'Tone adjustments'] },
+            { id: 'brainstorming', name: 'Brainstorming & Ideas', category: 'creative', what: 'Generate creative ideas, concepts, and solutions for any challenge', why: 'Expand your creative horizons. Get unstuck when you need fresh perspectives.', icon: '💡', examples: ['Product ideas', 'Feature concepts', 'Marketing campaigns'] },
+            { id: 'storytelling', name: 'Storytelling & Narrative', category: 'creative', what: 'Craft compelling narratives, stories, and scenarios', why: 'Engage your audience emotionally. Make your message memorable and impactful.', icon: '📖', examples: ['User stories', 'Case studies', 'Brand narratives'] },
+            { id: 'task-planning', name: 'Task Planning', category: 'productivity', what: 'Break down projects into actionable tasks with clear priorities', why: 'Stop feeling overwhelmed. Know exactly what to do next and why it matters.', icon: '✅', examples: ['Sprint planning', 'Project roadmaps', 'Task breakdowns'] },
+            { id: 'workflow-optimization', name: 'Workflow Optimization', category: 'productivity', what: 'Identify inefficiencies and suggest improvements to your processes', why: 'Work smarter, not harder. Free up time for high-impact work.', icon: '⚙️', examples: ['Process automation', 'Tool recommendations', 'Efficiency tips'] },
+            { id: 'decision-making', name: 'Decision Support', category: 'productivity', what: 'Provide frameworks and analysis to help make better decisions', why: 'Reduce decision paralysis. Feel confident in your choices.', icon: '🎲', examples: ['Decision matrices', 'Risk analysis', 'Option evaluation'] },
+            { id: 'learning', name: 'Learning & Teaching', category: 'productivity', what: 'Explain complex topics in simple terms or create learning materials', why: 'Learn faster and retain more. Share knowledge effectively with others.', icon: '🎓', examples: ['ELI5 explanations', 'Tutorial creation', 'Concept breakdowns'] },
+            { id: 'context-awareness', name: 'Long Context Understanding', category: 'advanced', what: 'Maintain understanding across long conversations and large codebases', why: 'Work on complex projects without repeating yourself. Get consistent help across multiple sessions.', icon: '🧠', examples: ['Multi-file refactoring', 'Codebase navigation', 'Project continuity'] },
+            { id: 'multimodal', name: 'Image Understanding', category: 'advanced', what: 'Analyze images, diagrams, screenshots, and visual content', why: 'Show instead of describe. Get help with UI, diagrams, or any visual content.', icon: '🖼️', examples: ['Screenshot debugging', 'Diagram analysis', 'UI feedback'] },
+            { id: 'reasoning', name: 'Advanced Reasoning', category: 'advanced', what: 'Handle complex logical reasoning and multi-step problem solving', why: 'Tackle sophisticated challenges. Get help with problems that require deep thinking.', icon: '🤔', examples: ['Algorithm design', 'System architecture', 'Complex debugging'] },
+            { id: 'automation', name: 'Tool Use & Automation', category: 'advanced', what: 'Interact with external tools, APIs, and systems autonomously', why: 'Automate repetitive tasks. Let Claude handle the tedious work while you focus on strategy.', icon: '🤖', examples: ['API integration', 'Data fetching', 'System automation'] },
+            { id: 'collaboration', name: 'Collaborative Development', category: 'advanced', what: 'Work alongside you through multiple iterations to achieve complex goals', why: 'Build ambitious projects faster. Have a coding partner available 24/7.', icon: '🤝', examples: ['Feature development', 'Architecture design', 'System building'] },
+        ];
+
+        let selectedCategory = null;
+        let searchQuery = '';
+
+        function getCategoryColor(categoryId) {
+            return featureCategories.find(c => c.id === categoryId)?.color || '#6366f1';
+        }
+
+        function getCategoryName(categoryId) {
+            return featureCategories.find(c => c.id === categoryId)?.name || '';
+        }
+
+        function getCategoryEmoji(categoryId) {
+            return featureCategories.find(c => c.id === categoryId)?.emoji || '';
+        }
+
+        function renderCategories() {
+            const categoriesEl = document.getElementById('categories');
+            categoriesEl.innerHTML = `
+                <button class="category-btn ${!selectedCategory ? 'active' : ''}" onclick="setCategory(null)">
+                    All Features
+                </button>
+                ${featureCategories.map(cat => `
+                    <button
+                        class="category-btn ${selectedCategory === cat.id ? 'active' : ''}"
+                        onclick="setCategory('${cat.id}')"
+                        style="color: ${selectedCategory === cat.id ? cat.color : 'white'}"
+                    >
+                        <span>${cat.emoji}</span>
+                        ${cat.name}
+                    </button>
+                `).join('')}
+            `;
+        }
+
+        function setCategory(categoryId) {
+            selectedCategory = categoryId;
+            renderCategories();
+            renderFeatures();
+        }
+
+        function renderFeatures() {
+            const filteredFeatures = features.filter(feature => {
+                const matchesCategory = !selectedCategory || feature.category === selectedCategory;
+                const matchesSearch = !searchQuery ||
+                    feature.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    feature.what.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    feature.why.toLowerCase().includes(searchQuery.toLowerCase());
+                return matchesCategory && matchesSearch;
+            });
+
+            const gridEl = document.getElementById('featuresGrid');
+            const noResultsEl = document.getElementById('noResults');
+
+            if (filteredFeatures.length === 0) {
+                gridEl.style.display = 'none';
+                noResultsEl.style.display = 'block';
+            } else {
+                gridEl.style.display = 'grid';
+                noResultsEl.style.display = 'none';
+                gridEl.innerHTML = filteredFeatures.map(feature => `
+                    <div class="feature-card" onclick='showModal(${JSON.stringify(feature)})'>
+                        <div class="feature-icon">${feature.icon}</div>
+                        <h3 class="feature-name">${feature.name}</h3>
+                        <p class="feature-preview">${feature.what}</p>
+                        <div class="feature-category">${getCategoryEmoji(feature.category)}</div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function showModal(feature) {
+            const modalEl = document.getElementById('modal');
+            const backdropEl = document.getElementById('modalBackdrop');
+            const color = getCategoryColor(feature.category);
+
+            modalEl.innerHTML = `
+                <button class="modal-close" onclick="closeModal()">✕</button>
+                <div class="modal-header" style="background: linear-gradient(135deg, ${color} 0%, ${color} 100%);">
+                    <div class="modal-icon">${feature.icon}</div>
+                    <h2 class="modal-title">${feature.name}</h2>
+                    <div class="modal-category">${getCategoryName(feature.category)}</div>
+                </div>
+                <div class="modal-content">
+                    <div class="modal-section">
+                        <h3 class="section-title">
+                            <span class="section-icon">💡</span>
+                            What it does
+                        </h3>
+                        <p class="section-text">${feature.what}</p>
+                    </div>
+                    <div class="modal-section">
+                        <h3 class="section-title">
+                            <span class="section-icon">⭐</span>
+                            Why it matters
+                        </h3>
+                        <p class="section-text why-text">${feature.why}</p>
+                    </div>
+                    ${feature.examples ? `
+                        <div class="modal-section">
+                            <h3 class="section-title">
+                                <span class="section-icon">📋</span>
+                                Examples
+                            </h3>
+                            <ul class="examples-list">
+                                ${feature.examples.map(ex => `<li>${ex}</li>`).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+                </div>
+                <div class="modal-footer">
+                    <button class="try-button" onclick="closeModal()">Got it!</button>
+                </div>
+            `;
+
+            modalEl.classList.add('active');
+            backdropEl.classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+            document.getElementById('modalBackdrop').classList.remove('active');
+        }
+
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            searchQuery = e.target.value;
+            renderFeatures();
+        });
+
+        document.getElementById('modalBackdrop').addEventListener('click', closeModal);
+
+        // Initialize
+        renderCategories();
+        renderFeatures();
+    </script>
+</body>
+</html>
