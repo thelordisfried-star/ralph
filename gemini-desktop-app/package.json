@@ -4,6 +4,7 @@
   "description": "Desktop app for Google Gemini AI — chat, summarize, translate, analyze screenshots, and more.",
   "main": "main.js",
   "scripts": {
+    "setup": "node setup.js",
     "start": "electron .",
     "build": "electron-builder",
     "build:win": "electron-builder --win",
