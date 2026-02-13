@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef } from 'react';
+import { useCallback, useState, useRef, memo } from 'react';
 import type { Node, Edge, NodeChange, EdgeChange, Connection } from '@xyflow/react';
 import {
   ReactFlow,
@@ -77,7 +77,7 @@ iterations learn from this one.`,
   },
 ];
 
-function CustomNode({ data }: { data: { title: string; description: string; phase: Phase } }) {
+const CustomNode = memo(function CustomNode({ data }: { data: { title: string; description: string; phase: Phase } }) {
   const colors = phaseColors[data.phase];
   return (
     <div
@@ -101,9 +101,9 @@ function CustomNode({ data }: { data: { title: string; description: string; phas
       </div>
     </div>
   );
-}
+});
 
-function NoteNode({ data }: { data: { content: string; color: { bg: string; border: string } } }) {
+const NoteNode = memo(function NoteNode({ data }: { data: { content: string; color: { bg: string; border: string } } }) {
   return (
     <div
       className="note-node"
@@ -115,7 +115,7 @@ function NoteNode({ data }: { data: { content: string; color: { bg: string; bord
       <pre>{data.content}</pre>
     </div>
   );
-}
+});
 
 const nodeTypes = { custom: CustomNode, note: NoteNode };
 
@@ -224,25 +224,27 @@ function createNoteNode(note: typeof notes[0], visible: boolean, position?: { x:
   };
 }
 
+function getNodesList(count: number, currentPositions: { [key: string]: { x: number; y: number } }) {
+  const stepNodes = allSteps.map((step, index) =>
+    createNode(step, index < count, currentPositions[step.id])
+  );
+  const noteNodes = notes.map(note => {
+    const noteVisible = count >= note.appearsWithStep;
+    return createNoteNode(note, noteVisible, currentPositions[note.id]);
+  });
+  return [...stepNodes, ...noteNodes];
+}
+
+const initialNodes = getNodesList(1, positions);
+const initialEdges = edgeConnections.map((conn, index) =>
+  createEdge(conn, index < 0)
+);
+
 function App() {
   const [visibleCount, setVisibleCount] = useState(1);
   const nodePositions = useRef<{ [key: string]: { x: number; y: number } }>({ ...positions });
 
-  const getNodes = (count: number) => {
-    const stepNodes = allSteps.map((step, index) =>
-      createNode(step, index < count, nodePositions.current[step.id])
-    );
-    const noteNodes = notes.map(note => {
-      const noteVisible = count >= note.appearsWithStep;
-      return createNoteNode(note, noteVisible, nodePositions.current[note.id]);
-    });
-    return [...stepNodes, ...noteNodes];
-  };
-
-  const initialNodes = getNodes(1);
-  const initialEdges = edgeConnections.map((conn, index) =>
-    createEdge(conn, index < 0)
-  );
+  const getNodes = (count: number) => getNodesList(count, nodePositions.current);
 
   const [nodes, setNodes] = useNodesState(initialNodes);
   const [edges, setEdges] = useEdgesState(initialEdges);
