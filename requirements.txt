@@ -1,0 +1,12 @@
+# Core — required
+psutil>=5.9.0
+tqdm>=4.65.0
+
+# Text extraction — all optional; script degrades gracefully if missing
+pytesseract>=0.3.10
+Pillow>=10.0.0
+PyMuPDF>=1.23.0
+faster-whisper>=0.10.0
+
+# Encoding detection — optional
+chardet>=5.0.0
