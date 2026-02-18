@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef } from 'react';
+import { useCallback, useState, useRef, memo, type CSSProperties } from 'react';
 import type { Node, Edge, NodeChange, EdgeChange, Connection } from '@xyflow/react';
 import {
   ReactFlow,
@@ -77,6 +77,53 @@ iterations learn from this one.`,
   },
 ];
 
+// Pre-compute stable data objects to prevent unnecessary re-renders
+const stepDataMap = allSteps.reduce((acc, step) => {
+  acc[step.id] = {
+    title: step.label,
+    description: step.description,
+    phase: step.phase,
+  };
+  return acc;
+}, {} as Record<string, { title: string; description: string; phase: Phase }>);
+
+const noteDataMap = notes.reduce((acc, note) => {
+  acc[note.id] = {
+    content: note.content,
+    color: note.color,
+  };
+  return acc;
+}, {} as Record<string, { content: string; color: { bg: string; border: string } }>);
+
+// Pre-compute stable style objects
+const visibleStyle: CSSProperties = {
+  width: nodeWidth,
+  height: nodeHeight,
+  opacity: 1,
+  transition: 'opacity 0.5s ease-in-out',
+  pointerEvents: 'auto',
+};
+
+const invisibleStyle: CSSProperties = {
+  width: nodeWidth,
+  height: nodeHeight,
+  opacity: 0,
+  transition: 'opacity 0.5s ease-in-out',
+  pointerEvents: 'none',
+};
+
+const noteVisibleStyle: CSSProperties = {
+  opacity: 1,
+  transition: 'opacity 0.5s ease-in-out',
+  pointerEvents: 'auto',
+};
+
+const noteInvisibleStyle: CSSProperties = {
+  opacity: 0,
+  transition: 'opacity 0.5s ease-in-out',
+  pointerEvents: 'none',
+};
+
 function CustomNode({ data }: { data: { title: string; description: string; phase: Phase } }) {
   const colors = phaseColors[data.phase];
   return (
@@ -117,7 +164,11 @@ function NoteNode({ data }: { data: { content: string; color: { bg: string; bord
   );
 }
 
-const nodeTypes = { custom: CustomNode, note: NoteNode };
+// Wrap in memo to prevent re-renders when props (data/id/etc) are stable
+const CustomNodeMemo = memo(CustomNode);
+const NoteNodeMemo = memo(NoteNode);
+
+const nodeTypes = { custom: CustomNodeMemo, note: NoteNodeMemo };
 
 const positions: { [key: string]: { x: number; y: number } } = {
   // Vertical setup flow on the left
@@ -158,18 +209,8 @@ function createNode(step: typeof allSteps[0], visible: boolean, position?: { x: 
     id: step.id,
     type: 'custom',
     position: position || positions[step.id],
-    data: {
-      title: step.label,
-      description: step.description,
-      phase: step.phase,
-    },
-    style: {
-      width: nodeWidth,
-      height: nodeHeight,
-      opacity: visible ? 1 : 0,
-      transition: 'opacity 0.5s ease-in-out',
-      pointerEvents: visible ? 'auto' : 'none',
-    },
+    data: stepDataMap[step.id], // Use stable data object
+    style: visible ? visibleStyle : invisibleStyle, // Use stable style object
   };
 }
 
@@ -212,34 +253,41 @@ function createNoteNode(note: typeof notes[0], visible: boolean, position?: { x:
     id: note.id,
     type: 'note',
     position: position || positions[note.id],
-    data: { content: note.content, color: note.color },
-    style: {
-      opacity: visible ? 1 : 0,
-      transition: 'opacity 0.5s ease-in-out',
-      pointerEvents: visible ? 'auto' : 'none',
-    },
+    data: noteDataMap[note.id], // Use stable data object
+    style: visible ? noteVisibleStyle : noteInvisibleStyle, // Use stable style object
     draggable: true,
     selectable: false,
     connectable: false,
   };
 }
 
+// Extracted from App to avoid recreation on every render
+// Accepts explicit positions to fix "accessing ref during render" lint error
+const getNodes = (count: number, currentPositions: Record<string, { x: number; y: number }>) => {
+  const stepNodes = allSteps.map((step, index) =>
+    createNode(step, index < count, currentPositions[step.id])
+  );
+  const noteNodes = notes.map(note => {
+    const noteVisible = count >= note.appearsWithStep;
+    return createNoteNode(note, noteVisible, currentPositions[note.id]);
+  });
+  return [...stepNodes, ...noteNodes];
+};
+
+const getEdgeVisibility = (conn: typeof edgeConnections[0], visibleStepCount: number) => {
+  const sourceIndex = allSteps.findIndex(s => s.id === conn.source);
+  const targetIndex = allSteps.findIndex(s => s.id === conn.target);
+  return sourceIndex < visibleStepCount && targetIndex < visibleStepCount;
+};
+
 function App() {
   const [visibleCount, setVisibleCount] = useState(1);
   const nodePositions = useRef<{ [key: string]: { x: number; y: number } }>({ ...positions });
 
-  const getNodes = (count: number) => {
-    const stepNodes = allSteps.map((step, index) =>
-      createNode(step, index < count, nodePositions.current[step.id])
-    );
-    const noteNodes = notes.map(note => {
-      const noteVisible = count >= note.appearsWithStep;
-      return createNoteNode(note, noteVisible, nodePositions.current[note.id]);
-    });
-    return [...stepNodes, ...noteNodes];
-  };
+  // Use getNodes with the initial positions constant for initialization
+  // This is safe because positions is constant and we are initializing state
+  const initialNodes = getNodes(1, positions);
 
-  const initialNodes = getNodes(1);
   const initialEdges = edgeConnections.map((conn, index) =>
     createEdge(conn, index < 0)
   );
@@ -280,18 +328,13 @@ function App() {
     [setEdges]
   );
 
-  const getEdgeVisibility = (conn: typeof edgeConnections[0], visibleStepCount: number) => {
-    const sourceIndex = allSteps.findIndex(s => s.id === conn.source);
-    const targetIndex = allSteps.findIndex(s => s.id === conn.target);
-    return sourceIndex < visibleStepCount && targetIndex < visibleStepCount;
-  };
-
   const handleNext = useCallback(() => {
     if (visibleCount < allSteps.length) {
       const newCount = visibleCount + 1;
       setVisibleCount(newCount);
 
-      setNodes(getNodes(newCount));
+      // Explicitly pass nodePositions.current here
+      setNodes(getNodes(newCount, nodePositions.current));
       setEdges(
         edgeConnections.map((conn) =>
           createEdge(conn, getEdgeVisibility(conn, newCount))
@@ -305,7 +348,8 @@ function App() {
       const newCount = visibleCount - 1;
       setVisibleCount(newCount);
 
-      setNodes(getNodes(newCount));
+      // Explicitly pass nodePositions.current here
+      setNodes(getNodes(newCount, nodePositions.current));
       setEdges(
         edgeConnections.map((conn) =>
           createEdge(conn, getEdgeVisibility(conn, newCount))
@@ -317,7 +361,8 @@ function App() {
   const handleReset = useCallback(() => {
     setVisibleCount(1);
     nodePositions.current = { ...positions };
-    setNodes(getNodes(1));
+    // Pass positions constant or reset positions
+    setNodes(getNodes(1, positions));
     setEdges(edgeConnections.map((conn, index) => createEdge(conn, index < 0)));
   }, [setNodes, setEdges]);
 
