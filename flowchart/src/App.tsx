@@ -1,4 +1,5 @@
-import { useCallback, useState, useRef } from 'react';
+import { useCallback, useState, useRef, memo } from 'react';
+import type { CSSProperties } from 'react';
 import type { Node, Edge, NodeChange, EdgeChange, Connection } from '@xyflow/react';
 import {
   ReactFlow,
@@ -20,6 +21,48 @@ import './App.css';
 
 const nodeWidth = 240;
 const nodeHeight = 70;
+
+const visibleStyle: CSSProperties = {
+  width: nodeWidth,
+  height: nodeHeight,
+  opacity: 1,
+  transition: 'opacity 0.5s ease-in-out',
+  pointerEvents: 'auto',
+};
+
+const invisibleStyle: CSSProperties = {
+  width: nodeWidth,
+  height: nodeHeight,
+  opacity: 0,
+  transition: 'opacity 0.5s ease-in-out',
+  pointerEvents: 'none',
+};
+
+const visibleNoteStyle: CSSProperties = {
+  opacity: 1,
+  transition: 'opacity 0.5s ease-in-out',
+  pointerEvents: 'auto',
+};
+
+const invisibleNoteStyle: CSSProperties = {
+  opacity: 0,
+  transition: 'opacity 0.5s ease-in-out',
+  pointerEvents: 'none',
+};
+
+const visibleEdgeStyle: CSSProperties = {
+  stroke: '#222',
+  strokeWidth: 2,
+  opacity: 1,
+  transition: 'opacity 0.5s ease-in-out',
+};
+
+const invisibleEdgeStyle: CSSProperties = {
+  stroke: '#222',
+  strokeWidth: 2,
+  opacity: 0,
+  transition: 'opacity 0.5s ease-in-out',
+};
 
 // Setup phase - horizontal at top
 // Loop phase - circular arrangement below
@@ -77,7 +120,18 @@ iterations learn from this one.`,
   },
 ];
 
-function CustomNode({ data }: { data: { title: string; description: string; phase: Phase } }) {
+const stepDataMap = Object.fromEntries(allSteps.map(s => [s.id, {
+  title: s.label,
+  description: s.description,
+  phase: s.phase,
+}]));
+
+const noteDataMap = Object.fromEntries(notes.map(n => [n.id, {
+  content: n.content,
+  color: n.color
+}]));
+
+const CustomNode = memo(function CustomNode({ data }: { data: { title: string; description: string; phase: Phase } }) {
   const colors = phaseColors[data.phase];
   return (
     <div
@@ -101,9 +155,9 @@ function CustomNode({ data }: { data: { title: string; description: string; phas
       </div>
     </div>
   );
-}
+});
 
-function NoteNode({ data }: { data: { content: string; color: { bg: string; border: string } } }) {
+const NoteNode = memo(function NoteNode({ data }: { data: { content: string; color: { bg: string; border: string } } }) {
   return (
     <div
       className="note-node"
@@ -115,7 +169,7 @@ function NoteNode({ data }: { data: { content: string; color: { bg: string; bord
       <pre>{data.content}</pre>
     </div>
   );
-}
+});
 
 const nodeTypes = { custom: CustomNode, note: NoteNode };
 
@@ -158,18 +212,8 @@ function createNode(step: typeof allSteps[0], visible: boolean, position?: { x: 
     id: step.id,
     type: 'custom',
     position: position || positions[step.id],
-    data: {
-      title: step.label,
-      description: step.description,
-      phase: step.phase,
-    },
-    style: {
-      width: nodeWidth,
-      height: nodeHeight,
-      opacity: visible ? 1 : 0,
-      transition: 'opacity 0.5s ease-in-out',
-      pointerEvents: visible ? 'auto' : 'none',
-    },
+    data: stepDataMap[step.id],
+    style: visible ? visibleStyle : invisibleStyle,
   };
 }
 
@@ -182,12 +226,7 @@ function createEdge(conn: typeof edgeConnections[0], visible: boolean): Edge {
     targetHandle: conn.targetHandle,
     label: visible ? conn.label : undefined,
     animated: visible,
-    style: {
-      stroke: '#222',
-      strokeWidth: 2,
-      opacity: visible ? 1 : 0,
-      transition: 'opacity 0.5s ease-in-out',
-    },
+    style: visible ? visibleEdgeStyle : invisibleEdgeStyle,
     labelStyle: {
       fill: '#222',
       fontWeight: 600,
@@ -212,34 +251,36 @@ function createNoteNode(note: typeof notes[0], visible: boolean, position?: { x:
     id: note.id,
     type: 'note',
     position: position || positions[note.id],
-    data: { content: note.content, color: note.color },
-    style: {
-      opacity: visible ? 1 : 0,
-      transition: 'opacity 0.5s ease-in-out',
-      pointerEvents: visible ? 'auto' : 'none',
-    },
+    data: noteDataMap[note.id],
+    style: visible ? visibleNoteStyle : invisibleNoteStyle,
     draggable: true,
     selectable: false,
     connectable: false,
   };
 }
 
+const getNodes = (count: number, currentPositions: Record<string, { x: number; y: number }>) => {
+  const stepNodes = allSteps.map((step, index) =>
+    createNode(step, index < count, currentPositions[step.id])
+  );
+  const noteNodes = notes.map(note => {
+    const noteVisible = count >= note.appearsWithStep;
+    return createNoteNode(note, noteVisible, currentPositions[note.id]);
+  });
+  return [...stepNodes, ...noteNodes];
+};
+
+const getEdgeVisibility = (conn: typeof edgeConnections[0], visibleStepCount: number) => {
+  const sourceIndex = allSteps.findIndex(s => s.id === conn.source);
+  const targetIndex = allSteps.findIndex(s => s.id === conn.target);
+  return sourceIndex < visibleStepCount && targetIndex < visibleStepCount;
+};
+
 function App() {
   const [visibleCount, setVisibleCount] = useState(1);
   const nodePositions = useRef<{ [key: string]: { x: number; y: number } }>({ ...positions });
 
-  const getNodes = (count: number) => {
-    const stepNodes = allSteps.map((step, index) =>
-      createNode(step, index < count, nodePositions.current[step.id])
-    );
-    const noteNodes = notes.map(note => {
-      const noteVisible = count >= note.appearsWithStep;
-      return createNoteNode(note, noteVisible, nodePositions.current[note.id]);
-    });
-    return [...stepNodes, ...noteNodes];
-  };
-
-  const initialNodes = getNodes(1);
+  const initialNodes = getNodes(1, positions);
   const initialEdges = edgeConnections.map((conn, index) =>
     createEdge(conn, index < 0)
   );
@@ -280,18 +321,12 @@ function App() {
     [setEdges]
   );
 
-  const getEdgeVisibility = (conn: typeof edgeConnections[0], visibleStepCount: number) => {
-    const sourceIndex = allSteps.findIndex(s => s.id === conn.source);
-    const targetIndex = allSteps.findIndex(s => s.id === conn.target);
-    return sourceIndex < visibleStepCount && targetIndex < visibleStepCount;
-  };
-
   const handleNext = useCallback(() => {
     if (visibleCount < allSteps.length) {
       const newCount = visibleCount + 1;
       setVisibleCount(newCount);
 
-      setNodes(getNodes(newCount));
+      setNodes(getNodes(newCount, nodePositions.current));
       setEdges(
         edgeConnections.map((conn) =>
           createEdge(conn, getEdgeVisibility(conn, newCount))
@@ -305,7 +340,7 @@ function App() {
       const newCount = visibleCount - 1;
       setVisibleCount(newCount);
 
-      setNodes(getNodes(newCount));
+      setNodes(getNodes(newCount, nodePositions.current));
       setEdges(
         edgeConnections.map((conn) =>
           createEdge(conn, getEdgeVisibility(conn, newCount))
@@ -317,7 +352,7 @@ function App() {
   const handleReset = useCallback(() => {
     setVisibleCount(1);
     nodePositions.current = { ...positions };
-    setNodes(getNodes(1));
+    setNodes(getNodes(1, positions));
     setEdges(edgeConnections.map((conn, index) => createEdge(conn, index < 0)));
   }, [setNodes, setEdges]);
 
