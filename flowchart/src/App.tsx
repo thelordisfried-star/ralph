@@ -280,11 +280,11 @@ function App() {
     [setEdges]
   );
 
-  const getEdgeVisibility = (conn: typeof edgeConnections[0], visibleStepCount: number) => {
+  const getEdgeVisibility = useCallback((conn: typeof edgeConnections[0], visibleStepCount: number) => {
     const sourceIndex = allSteps.findIndex(s => s.id === conn.source);
     const targetIndex = allSteps.findIndex(s => s.id === conn.target);
     return sourceIndex < visibleStepCount && targetIndex < visibleStepCount;
-  };
+  }, []);
 
   const handleNext = useCallback(() => {
     if (visibleCount < allSteps.length) {
@@ -298,7 +298,7 @@ function App() {
         )
       );
     }
-  }, [visibleCount, setNodes, setEdges]);
+  }, [visibleCount, setNodes, setEdges, getEdgeVisibility]);
 
   const handlePrev = useCallback(() => {
     if (visibleCount > 1) {
@@ -312,7 +312,7 @@ function App() {
         )
       );
     }
-  }, [visibleCount, setNodes, setEdges]);
+  }, [visibleCount, setNodes, setEdges, getEdgeVisibility]);
 
   const handleReset = useCallback(() => {
     setVisibleCount(1);
