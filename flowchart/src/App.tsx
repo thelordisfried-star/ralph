@@ -224,25 +224,47 @@ function createNoteNode(note: typeof notes[0], visible: boolean, position?: { x:
   };
 }
 
+/**
+ * Generates nodes based on the current visibility count and node positions.
+ * Moved outside the component to avoid unnecessary allocation on every render.
+ */
+const getNodes = (count: number, currentPositions: { [key: string]: { x: number; y: number } }) => {
+  const stepNodes = allSteps.map((step, index) =>
+    createNode(step, index < count, currentPositions[step.id])
+  );
+  const noteNodes = notes.map(note => {
+    const noteVisible = count >= note.appearsWithStep;
+    return createNoteNode(note, noteVisible, currentPositions[note.id]);
+  });
+  return [...stepNodes, ...noteNodes];
+};
+
+/**
+ * Determines if an edge should be visible based on the current step count.
+ * Moved outside the component as it only depends on static data and the count.
+ */
+const getEdgeVisibility = (conn: typeof edgeConnections[0], visibleStepCount: number) => {
+  const sourceIndex = allSteps.findIndex(s => s.id === conn.source);
+  const targetIndex = allSteps.findIndex(s => s.id === conn.target);
+  return sourceIndex < visibleStepCount && targetIndex < visibleStepCount;
+};
+
+/**
+ * Generates all edges with their correct visibility state.
+ */
+const getEdges = (count: number) => {
+  return edgeConnections.map((conn) =>
+    createEdge(conn, getEdgeVisibility(conn, count))
+  );
+};
+
+// Initial state constants defined outside to avoid re-calculation on every render.
+const initialNodes = getNodes(1, positions);
+const initialEdges = getEdges(1);
+
 function App() {
   const [visibleCount, setVisibleCount] = useState(1);
   const nodePositions = useRef<{ [key: string]: { x: number; y: number } }>({ ...positions });
-
-  const getNodes = (count: number) => {
-    const stepNodes = allSteps.map((step, index) =>
-      createNode(step, index < count, nodePositions.current[step.id])
-    );
-    const noteNodes = notes.map(note => {
-      const noteVisible = count >= note.appearsWithStep;
-      return createNoteNode(note, noteVisible, nodePositions.current[note.id]);
-    });
-    return [...stepNodes, ...noteNodes];
-  };
-
-  const initialNodes = getNodes(1);
-  const initialEdges = edgeConnections.map((conn, index) =>
-    createEdge(conn, index < 0)
-  );
 
   const [nodes, setNodes] = useNodesState(initialNodes);
   const [edges, setEdges] = useEdgesState(initialEdges);
@@ -280,23 +302,13 @@ function App() {
     [setEdges]
   );
 
-  const getEdgeVisibility = (conn: typeof edgeConnections[0], visibleStepCount: number) => {
-    const sourceIndex = allSteps.findIndex(s => s.id === conn.source);
-    const targetIndex = allSteps.findIndex(s => s.id === conn.target);
-    return sourceIndex < visibleStepCount && targetIndex < visibleStepCount;
-  };
-
   const handleNext = useCallback(() => {
     if (visibleCount < allSteps.length) {
       const newCount = visibleCount + 1;
       setVisibleCount(newCount);
 
-      setNodes(getNodes(newCount));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      setNodes(getNodes(newCount, nodePositions.current));
+      setEdges(getEdges(newCount));
     }
   }, [visibleCount, setNodes, setEdges]);
 
@@ -305,20 +317,16 @@ function App() {
       const newCount = visibleCount - 1;
       setVisibleCount(newCount);
 
-      setNodes(getNodes(newCount));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      setNodes(getNodes(newCount, nodePositions.current));
+      setEdges(getEdges(newCount));
     }
   }, [visibleCount, setNodes, setEdges]);
 
   const handleReset = useCallback(() => {
     setVisibleCount(1);
     nodePositions.current = { ...positions };
-    setNodes(getNodes(1));
-    setEdges(edgeConnections.map((conn, index) => createEdge(conn, index < 0)));
+    setNodes(getNodes(1, nodePositions.current));
+    setEdges(getEdges(1));
   }, [setNodes, setEdges]);
 
   return (
