@@ -120,7 +120,7 @@ const invisibleEdgeStyle: CSSProperties = {
   transition: 'opacity 0.5s ease-in-out',
 };
 
-function CustomNode({ data }: { data: { title: string; description: string; phase: Phase } }) {
+const CustomNode = memo(({ data }: { data: { title: string; description: string; phase: Phase } }) => {
   const colors = phaseColors[data.phase];
   return (
     <div
@@ -144,9 +144,9 @@ function CustomNode({ data }: { data: { title: string; description: string; phas
       </div>
     </div>
   );
-}
+});
 
-function NoteNode({ data }: { data: { content: string; color: { bg: string; border: string } } }) {
+const NoteNode = memo(({ data }: { data: { content: string; color: { bg: string; border: string } } }) => {
   return (
     <div
       className="note-node"
@@ -158,13 +158,9 @@ function NoteNode({ data }: { data: { content: string; color: { bg: string; bord
       <pre>{data.content}</pre>
     </div>
   );
-}
+});
 
-// Memoize components to prevent unnecessary re-renders
-const MemoizedCustomNode = memo(CustomNode);
-const MemoizedNoteNode = memo(NoteNode);
-
-const nodeTypes = { custom: MemoizedCustomNode, note: MemoizedNoteNode };
+const nodeTypes = { custom: CustomNode, note: NoteNode };
 
 const positions: { [key: string]: { x: number; y: number } } = {
   // Vertical setup flow on the left
