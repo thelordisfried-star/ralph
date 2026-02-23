@@ -49,6 +49,8 @@ const allSteps: { id: string; label: string; description: string; phase: Phase }
   { id: '10', label: 'Done!', description: 'All stories complete', phase: 'done' },
 ];
 
+const stepIndexMap = new Map(allSteps.map((step, index) => [step.id, index]));
+
 const notes = [
   {
     id: 'note-1',
@@ -224,22 +226,24 @@ function createNoteNode(note: typeof notes[0], visible: boolean, position?: { x:
   };
 }
 
+function getNodes(count: number, currentPositions: { [key: string]: { x: number; y: number } }) {
+  const stepNodes = allSteps.map((step, index) =>
+    createNode(step, index < count, currentPositions[step.id])
+  );
+  const noteNodes = notes.map(note => {
+    const noteVisible = count >= note.appearsWithStep;
+    return createNoteNode(note, noteVisible, currentPositions[note.id]);
+  });
+  return [...stepNodes, ...noteNodes];
+};
+
 function App() {
   const [visibleCount, setVisibleCount] = useState(1);
   const nodePositions = useRef<{ [key: string]: { x: number; y: number } }>({ ...positions });
 
-  const getNodes = (count: number) => {
-    const stepNodes = allSteps.map((step, index) =>
-      createNode(step, index < count, nodePositions.current[step.id])
-    );
-    const noteNodes = notes.map(note => {
-      const noteVisible = count >= note.appearsWithStep;
-      return createNoteNode(note, noteVisible, nodePositions.current[note.id]);
-    });
-    return [...stepNodes, ...noteNodes];
-  };
 
-  const initialNodes = getNodes(1);
+
+  const initialNodes = getNodes(1, positions);
   const initialEdges = edgeConnections.map((conn, index) =>
     createEdge(conn, index < 0)
   );
@@ -281,8 +285,8 @@ function App() {
   );
 
   const getEdgeVisibility = (conn: typeof edgeConnections[0], visibleStepCount: number) => {
-    const sourceIndex = allSteps.findIndex(s => s.id === conn.source);
-    const targetIndex = allSteps.findIndex(s => s.id === conn.target);
+    const sourceIndex = stepIndexMap.get(conn.source) ?? -1;
+    const targetIndex = stepIndexMap.get(conn.target) ?? -1;
     return sourceIndex < visibleStepCount && targetIndex < visibleStepCount;
   };
 
@@ -291,7 +295,7 @@ function App() {
       const newCount = visibleCount + 1;
       setVisibleCount(newCount);
 
-      setNodes(getNodes(newCount));
+      setNodes(getNodes(newCount, nodePositions.current));
       setEdges(
         edgeConnections.map((conn) =>
           createEdge(conn, getEdgeVisibility(conn, newCount))
@@ -305,7 +309,7 @@ function App() {
       const newCount = visibleCount - 1;
       setVisibleCount(newCount);
 
-      setNodes(getNodes(newCount));
+      setNodes(getNodes(newCount, nodePositions.current));
       setEdges(
         edgeConnections.map((conn) =>
           createEdge(conn, getEdgeVisibility(conn, newCount))
@@ -317,7 +321,7 @@ function App() {
   const handleReset = useCallback(() => {
     setVisibleCount(1);
     nodePositions.current = { ...positions };
-    setNodes(getNodes(1));
+    setNodes(getNodes(1, nodePositions.current));
     setEdges(edgeConnections.map((conn, index) => createEdge(conn, index < 0)));
   }, [setNodes, setEdges]);
 
