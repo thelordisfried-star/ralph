@@ -1,4 +1,5 @@
 import { useCallback, useState, useRef } from 'react';
+import type { CSSProperties } from 'react';
 import type { Node, Edge, NodeChange, EdgeChange, Connection } from '@xyflow/react';
 import {
   ReactFlow,
@@ -20,6 +21,40 @@ import './App.css';
 
 const nodeWidth = 240;
 const nodeHeight = 70;
+
+const CONTROLS_STYLE: CSSProperties = {
+  position: 'absolute',
+  bottom: 10,
+  right: 20,
+  background: '#c0c0c0',
+  padding: 4,
+  border: '2px outset white',
+  display: 'flex',
+};
+
+const STEP_COUNTER_STYLE: CSSProperties = {
+  padding: '0 8px',
+  display: 'flex',
+  alignItems: 'center',
+};
+
+const STATUS_ITEM_STYLE: CSSProperties = {
+  minWidth: 100,
+};
+
+const IMG_STYLE: CSSProperties = {
+  height: 12,
+  marginRight: 4,
+  verticalAlign: 'middle',
+};
+
+const HANDLE_RIGHT_STYLE: CSSProperties = {
+  right: 0,
+};
+
+const HANDLE_BOTTOM_STYLE: CSSProperties = {
+  bottom: 0,
+};
 
 // Setup phase - horizontal at top
 // Loop phase - circular arrangement below
@@ -91,8 +126,8 @@ function CustomNode({ data }: { data: { title: string; description: string; phas
       <Handle type="target" position={Position.Left} id="left" />
       <Handle type="source" position={Position.Right} id="right" />
       <Handle type="source" position={Position.Bottom} id="bottom" />
-      <Handle type="target" position={Position.Right} id="right-target" style={{ right: 0 }} />
-      <Handle type="target" position={Position.Bottom} id="bottom-target" style={{ bottom: 0 }} />
+      <Handle type="target" position={Position.Right} id="right-target" style={HANDLE_RIGHT_STYLE} />
+      <Handle type="target" position={Position.Bottom} id="bottom-target" style={HANDLE_BOTTOM_STYLE} />
       <Handle type="source" position={Position.Top} id="top-source" />
       <Handle type="source" position={Position.Left} id="left-source" />
       <div className="node-content">
@@ -224,22 +259,25 @@ function createNoteNode(note: typeof notes[0], visible: boolean, position?: { x:
   };
 }
 
+
+
+
 function App() {
   const [visibleCount, setVisibleCount] = useState(1);
   const nodePositions = useRef<{ [key: string]: { x: number; y: number } }>({ ...positions });
 
-  const getNodes = (count: number) => {
+  const getNodes = (count: number, currentPositions: { [key: string]: { x: number; y: number } }) => {
     const stepNodes = allSteps.map((step, index) =>
-      createNode(step, index < count, nodePositions.current[step.id])
+      createNode(step, index < count, currentPositions[step.id])
     );
     const noteNodes = notes.map(note => {
       const noteVisible = count >= note.appearsWithStep;
-      return createNoteNode(note, noteVisible, nodePositions.current[note.id]);
+      return createNoteNode(note, noteVisible, currentPositions[note.id]);
     });
     return [...stepNodes, ...noteNodes];
   };
 
-  const initialNodes = getNodes(1);
+  const initialNodes = getNodes(1, positions);
   const initialEdges = edgeConnections.map((conn, index) =>
     createEdge(conn, index < 0)
   );
@@ -291,7 +329,7 @@ function App() {
       const newCount = visibleCount + 1;
       setVisibleCount(newCount);
 
-      setNodes(getNodes(newCount));
+      setNodes(getNodes(newCount, nodePositions.current));
       setEdges(
         edgeConnections.map((conn) =>
           createEdge(conn, getEdgeVisibility(conn, newCount))
@@ -305,7 +343,7 @@ function App() {
       const newCount = visibleCount - 1;
       setVisibleCount(newCount);
 
-      setNodes(getNodes(newCount));
+      setNodes(getNodes(newCount, nodePositions.current));
       setEdges(
         edgeConnections.map((conn) =>
           createEdge(conn, getEdgeVisibility(conn, newCount))
@@ -317,7 +355,7 @@ function App() {
   const handleReset = useCallback(() => {
     setVisibleCount(1);
     nodePositions.current = { ...positions };
-    setNodes(getNodes(1));
+    setNodes(getNodes(1, nodePositions.current));
     setEdges(edgeConnections.map((conn, index) => createEdge(conn, index < 0)));
   }, [setNodes, setEdges]);
 
@@ -326,7 +364,7 @@ function App() {
       {/* Title Bar */}
       <div className="title-bar">
         <div className="title-text">
-          <img src="/vite.svg" alt="" style={{ height: 12, marginRight: 4, verticalAlign: 'middle' }} />
+          <img src="/vite.svg" alt="" style={IMG_STYLE} />
           Untitled - Notepad
         </div>
         <div className="title-controls">
@@ -374,11 +412,11 @@ function App() {
         </ReactFlow>
 
         {/* Overlay Controls (Styled as bottom toolbar) */}
-        <div className="controls" style={{ position: 'absolute', bottom: 10, right: 20, background: '#c0c0c0', padding: 4, border: '2px outset white', display: 'flex' }}>
+        <div className="controls" style={CONTROLS_STYLE}>
           <button onClick={handlePrev} disabled={visibleCount <= 1}>
             &lt; Prev
           </button>
-          <span className="step-counter" style={{ padding: '0 8px', display: 'flex', alignItems: 'center' }}>
+          <span className="step-counter" style={STEP_COUNTER_STYLE}>
             Step {visibleCount}/{allSteps.length}
           </span>
           <button onClick={handleNext} disabled={visibleCount >= allSteps.length}>
@@ -393,7 +431,7 @@ function App() {
       {/* Status Bar */}
       <div className="status-bar">
         <div className="status-main"></div>
-        <div className="status-item" style={{ minWidth: 100 }}>Ln 1, Col 1</div>
+        <div className="status-item" style={STATUS_ITEM_STYLE}>Ln 1, Col 1</div>
         <div className="status-item">100%</div>
         <div className="status-item">Windows (CRLF)</div>
         <div className="status-item">UTF-8</div>
