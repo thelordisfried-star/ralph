@@ -121,6 +121,76 @@ const nodeTypes = { custom: CustomNode, note: NoteNode };
 
 const stepIndexMap = new Map(allSteps.map((s, i) => [s.id, i]));
 
+const stepDataMap = new Map(allSteps.map(step => [step.id, {
+  title: step.label,
+  description: step.description,
+  phase: step.phase,
+}]));
+
+const noteDataMap = new Map(notes.map(note => [note.id, {
+  content: note.content,
+  color: note.color,
+}]));
+
+const visibleStepStyle = {
+  width: nodeWidth,
+  height: nodeHeight,
+  opacity: 1,
+  transition: 'opacity 0.5s ease-in-out',
+  pointerEvents: 'auto',
+} as const;
+
+const hiddenStepStyle = {
+  width: nodeWidth,
+  height: nodeHeight,
+  opacity: 0,
+  transition: 'opacity 0.5s ease-in-out',
+  pointerEvents: 'none',
+} as const;
+
+const visibleNoteStyle = {
+  opacity: 1,
+  transition: 'opacity 0.5s ease-in-out',
+  pointerEvents: 'auto',
+} as const;
+
+const hiddenNoteStyle = {
+  opacity: 0,
+  transition: 'opacity 0.5s ease-in-out',
+  pointerEvents: 'none',
+} as const;
+
+const visibleEdgeStyle = {
+  stroke: '#222',
+  strokeWidth: 2,
+  opacity: 1,
+  transition: 'opacity 0.5s ease-in-out',
+};
+
+const hiddenEdgeStyle = {
+  stroke: '#222',
+  strokeWidth: 2,
+  opacity: 0,
+  transition: 'opacity 0.5s ease-in-out',
+};
+
+const edgeLabelStyle = {
+  fill: '#222',
+  fontWeight: 600,
+  fontSize: 14,
+};
+
+const edgeLabelBgStyle = {
+  fill: '#fff',
+  stroke: '#222',
+  strokeWidth: 1,
+};
+
+const edgeMarkerEnd = {
+  type: MarkerType.ArrowClosed,
+  color: '#222',
+};
+
 const positions: { [key: string]: { x: number; y: number } } = {
   // Vertical setup flow on the left
   '1': { x: 20, y: 20 },
@@ -160,18 +230,8 @@ function createNode(step: typeof allSteps[0], visible: boolean, position?: { x: 
     id: step.id,
     type: 'custom',
     position: position || positions[step.id],
-    data: {
-      title: step.label,
-      description: step.description,
-      phase: step.phase,
-    },
-    style: {
-      width: nodeWidth,
-      height: nodeHeight,
-      opacity: visible ? 1 : 0,
-      transition: 'opacity 0.5s ease-in-out',
-      pointerEvents: visible ? 'auto' : 'none',
-    },
+    data: stepDataMap.get(step.id)!,
+    style: visible ? visibleStepStyle : hiddenStepStyle,
   };
 }
 
@@ -184,28 +244,12 @@ function createEdge(conn: typeof edgeConnections[0], visible: boolean): Edge {
     targetHandle: conn.targetHandle,
     label: visible ? conn.label : undefined,
     animated: visible,
-    style: {
-      stroke: '#222',
-      strokeWidth: 2,
-      opacity: visible ? 1 : 0,
-      transition: 'opacity 0.5s ease-in-out',
-    },
-    labelStyle: {
-      fill: '#222',
-      fontWeight: 600,
-      fontSize: 14,
-    },
+    style: visible ? visibleEdgeStyle : hiddenEdgeStyle,
+    labelStyle: edgeLabelStyle,
     labelShowBg: true,
     labelBgPadding: [8, 4] as [number, number],
-    labelBgStyle: {
-      fill: '#fff',
-      stroke: '#222',
-      strokeWidth: 1,
-    },
-    markerEnd: {
-      type: MarkerType.ArrowClosed,
-      color: '#222',
-    },
+    labelBgStyle: edgeLabelBgStyle,
+    markerEnd: edgeMarkerEnd,
   };
 }
 
@@ -214,12 +258,8 @@ function createNoteNode(note: typeof notes[0], visible: boolean, position?: { x:
     id: note.id,
     type: 'note',
     position: position || positions[note.id],
-    data: { content: note.content, color: note.color },
-    style: {
-      opacity: visible ? 1 : 0,
-      transition: 'opacity 0.5s ease-in-out',
-      pointerEvents: visible ? 'auto' : 'none',
-    },
+    data: noteDataMap.get(note.id)!,
+    style: visible ? visibleNoteStyle : hiddenNoteStyle,
     draggable: true,
     selectable: false,
     connectable: false,
@@ -247,7 +287,8 @@ function App() {
   const [visibleCount, setVisibleCount] = useState(1);
   const nodePositions = useRef<{ [key: string]: { x: number; y: number } }>({ ...positions });
 
-  const initialNodes = useMemo(() => getNodes(1, nodePositions.current), []);
+  // Use positions directly to avoid reading ref during render
+  const initialNodes = useMemo(() => getNodes(1, positions), []);
   const initialEdges = useMemo(() => edgeConnections.map((conn, index) =>
     createEdge(conn, index < 0)
   ), []);
