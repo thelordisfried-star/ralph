@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef, useMemo } from 'react';
+import { useCallback, useState, useRef, useMemo, memo } from 'react';
 import type { Node, Edge, NodeChange, EdgeChange, Connection } from '@xyflow/react';
 import {
   ReactFlow,
@@ -117,9 +117,26 @@ function NoteNode({ data }: { data: { content: string; color: { bg: string; bord
   );
 }
 
-const nodeTypes = { custom: CustomNode, note: NoteNode };
+// Wrap in memo to prevent unnecessary re-renders when props haven't changed.
+// This relies on the data prop being referentially stable, which was addressed
+// with the map lookups.
+const nodeTypes = { custom: memo(CustomNode), note: memo(NoteNode) };
 
 const stepIndexMap = new Map(allSteps.map((s, i) => [s.id, i]));
+
+// PRE-CALCULATED DATA MAPS FOR REFERENTIAL STABILITY
+// This prevents new objects from being created on every node update
+// which is required for React.memo to work properly on the custom node components.
+const stepDataMap = new Map(
+  allSteps.map((step) => [
+    step.id,
+    { title: step.label, description: step.description, phase: step.phase },
+  ])
+);
+
+const noteDataMap = new Map(
+  notes.map((note) => [note.id, { content: note.content, color: note.color }])
+);
 
 const positions: { [key: string]: { x: number; y: number } } = {
   // Vertical setup flow on the left
@@ -160,11 +177,7 @@ function createNode(step: typeof allSteps[0], visible: boolean, position?: { x: 
     id: step.id,
     type: 'custom',
     position: position || positions[step.id],
-    data: {
-      title: step.label,
-      description: step.description,
-      phase: step.phase,
-    },
+    data: stepDataMap.get(step.id)!,
     style: {
       width: nodeWidth,
       height: nodeHeight,
@@ -214,7 +227,7 @@ function createNoteNode(note: typeof notes[0], visible: boolean, position?: { x:
     id: note.id,
     type: 'note',
     position: position || positions[note.id],
-    data: { content: note.content, color: note.color },
+    data: noteDataMap.get(note.id)!,
     style: {
       opacity: visible ? 1 : 0,
       transition: 'opacity 0.5s ease-in-out',
@@ -243,11 +256,15 @@ const getEdgeVisibility = (conn: typeof edgeConnections[0], visibleStepCount: nu
   return sourceIndex < visibleStepCount && targetIndex < visibleStepCount;
 };
 
+const fitViewOptions = { padding: 0.2 };
+const deleteKeyCode = ['Backspace', 'Delete'];
+
 function App() {
   const [visibleCount, setVisibleCount] = useState(1);
   const nodePositions = useRef<{ [key: string]: { x: number; y: number } }>({ ...positions });
 
-  const initialNodes = useMemo(() => getNodes(1, nodePositions.current), []);
+  // Do not read nodePositions.current during render. Use initial positions object
+  const initialNodes = useMemo(() => getNodes(1, positions), []);
   const initialEdges = useMemo(() => edgeConnections.map((conn, index) =>
     createEdge(conn, index < 0)
   ), []);
@@ -358,12 +375,12 @@ function App() {
           onConnect={onConnect}
           onReconnect={onReconnect}
           fitView
-          fitViewOptions={{ padding: 0.2 }}
+          fitViewOptions={fitViewOptions}
           nodesDraggable={true}
           nodesConnectable={true}
           edgesReconnectable={true}
           elementsSelectable={true}
-          deleteKeyCode={['Backspace', 'Delete']}
+          deleteKeyCode={deleteKeyCode}
           panOnDrag={true}
           panOnScroll={true}
           zoomOnScroll={true}

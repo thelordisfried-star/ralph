@@ -1,0 +1,3 @@
+## 2024-03-01 - [React Flow Node Memoization]
+**Learning:** In React Flow, custom nodes re-render on every state change unless wrapped in `React.memo()`. However, `React.memo()` is useless if the `data` prop is constructed dynamically (e.g., inline objects or new object references generated per render).
+**Action:** When optimizing React Flow applications, always statically extract the node data into module-level variables (like `Map` lookups) to ensure referential stability before applying `React.memo()` to custom node components. Also, extract non-primitive props passed to `<ReactFlow />` (like `fitViewOptions` and `deleteKeyCode`) outside the component to prevent unnecessary re-evaluations.
