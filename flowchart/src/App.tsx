@@ -1,4 +1,5 @@
-import { useCallback, useState, useRef, useMemo } from 'react';
+import React, { useCallback, useState, useRef, useMemo } from 'react';
+import type { CSSProperties } from 'react';
 import type { Node, Edge, NodeChange, EdgeChange, Connection } from '@xyflow/react';
 import {
   ReactFlow,
@@ -117,9 +118,52 @@ function NoteNode({ data }: { data: { content: string; color: { bg: string; bord
   );
 }
 
-const nodeTypes = { custom: CustomNode, note: NoteNode };
+const nodeTypes = { custom: React.memo(CustomNode), note: React.memo(NoteNode) };
 
 const stepIndexMap = new Map(allSteps.map((s, i) => [s.id, i]));
+
+// ⚡ Bolt Optimization: Extract inline objects to referentially stable constants
+// Impact: Prevents ReactFlow from re-rendering the entire node tree when state changes.
+const visibleStepStyle: CSSProperties = {
+  width: nodeWidth,
+  height: nodeHeight,
+  opacity: 1,
+  transition: 'opacity 0.5s ease-in-out',
+  pointerEvents: 'auto',
+};
+
+const hiddenStepStyle: CSSProperties = {
+  width: nodeWidth,
+  height: nodeHeight,
+  opacity: 0,
+  transition: 'opacity 0.5s ease-in-out',
+  pointerEvents: 'none',
+};
+
+const visibleNoteStyle: CSSProperties = {
+  opacity: 1,
+  transition: 'opacity 0.5s ease-in-out',
+  pointerEvents: 'auto',
+};
+
+const hiddenNoteStyle: CSSProperties = {
+  opacity: 0,
+  transition: 'opacity 0.5s ease-in-out',
+  pointerEvents: 'none',
+};
+
+const fitViewOptions = { padding: 0.2 };
+const deleteKeyCode = ['Backspace', 'Delete'];
+
+const stepDataMap = new Map(allSteps.map(step => [
+  step.id,
+  { title: step.label, description: step.description, phase: step.phase }
+]));
+
+const noteDataMap = new Map(notes.map(note => [
+  note.id,
+  { content: note.content, color: note.color }
+]));
 
 const positions: { [key: string]: { x: number; y: number } } = {
   // Vertical setup flow on the left
@@ -160,18 +204,10 @@ function createNode(step: typeof allSteps[0], visible: boolean, position?: { x: 
     id: step.id,
     type: 'custom',
     position: position || positions[step.id],
-    data: {
-      title: step.label,
-      description: step.description,
-      phase: step.phase,
-    },
-    style: {
-      width: nodeWidth,
-      height: nodeHeight,
-      opacity: visible ? 1 : 0,
-      transition: 'opacity 0.5s ease-in-out',
-      pointerEvents: visible ? 'auto' : 'none',
-    },
+    // ⚡ Bolt: Use referentially stable maps for data instead of creating new objects
+    data: stepDataMap.get(step.id)!,
+    // ⚡ Bolt: Use stable style references to avoid component re-renders
+    style: visible ? visibleStepStyle : hiddenStepStyle,
   };
 }
 
@@ -214,12 +250,9 @@ function createNoteNode(note: typeof notes[0], visible: boolean, position?: { x:
     id: note.id,
     type: 'note',
     position: position || positions[note.id],
-    data: { content: note.content, color: note.color },
-    style: {
-      opacity: visible ? 1 : 0,
-      transition: 'opacity 0.5s ease-in-out',
-      pointerEvents: visible ? 'auto' : 'none',
-    },
+    // ⚡ Bolt: Referentially stable data mapping for notes
+    data: noteDataMap.get(note.id)!,
+    style: visible ? visibleNoteStyle : hiddenNoteStyle,
     draggable: true,
     selectable: false,
     connectable: false,
@@ -247,7 +280,8 @@ function App() {
   const [visibleCount, setVisibleCount] = useState(1);
   const nodePositions = useRef<{ [key: string]: { x: number; y: number } }>({ ...positions });
 
-  const initialNodes = useMemo(() => getNodes(1, nodePositions.current), []);
+  // ⚡ Bolt Optimization: Use module-level constant to avoid accessing ref during render
+  const initialNodes = useMemo(() => getNodes(1, positions), []);
   const initialEdges = useMemo(() => edgeConnections.map((conn, index) =>
     createEdge(conn, index < 0)
   ), []);
@@ -358,12 +392,13 @@ function App() {
           onConnect={onConnect}
           onReconnect={onReconnect}
           fitView
-          fitViewOptions={{ padding: 0.2 }}
+          // ⚡ Bolt Optimization: Using stable array/object refs to prevent ReactFlow internal re-renders
+          fitViewOptions={fitViewOptions}
           nodesDraggable={true}
           nodesConnectable={true}
           edgesReconnectable={true}
           elementsSelectable={true}
-          deleteKeyCode={['Backspace', 'Delete']}
+          deleteKeyCode={deleteKeyCode}
           panOnDrag={true}
           panOnScroll={true}
           zoomOnScroll={true}
