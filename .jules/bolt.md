@@ -1,0 +1,3 @@
+## 2024-05-24 - Maximizing React.memo Benefits in ReactFlow
+**Learning:** `ReactFlow` components (like `CustomNode` and `NoteNode`) use `React.memo` by default. Passing inline objects into the `data` and `style` properties on each render forces a new object reference, causing React to completely bypass the `React.memo` optimization and unnecessarily re-render every node and edge upon each state change (like updating visible counts).
+**Action:** Always extract configuration data (`data`, `style`, `labelBgStyle`, `markerEnd`) into module-level constants or stable Maps. Never pass inline objects directly as properties inside `ReactFlow` component mapping logic.
