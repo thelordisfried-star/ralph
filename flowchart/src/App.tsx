@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef, useMemo } from 'react';
+import React, { useCallback, useState, useRef, useMemo } from 'react';
 import type { Node, Edge, NodeChange, EdgeChange, Connection } from '@xyflow/react';
 import {
   ReactFlow,
@@ -77,7 +77,10 @@ iterations learn from this one.`,
   },
 ];
 
-function CustomNode({ data }: { data: { title: string; description: string; phase: Phase } }) {
+// ⚡ Bolt Optimization: Wrap React Flow custom nodes in React.memo
+// Prevents unnecessary re-renders when other parts of the flow state change
+// Expected Impact: Reduces wasted render cycles on nodes whose props (data, selected, etc.) haven't changed.
+const CustomNode = React.memo(function CustomNode({ data }: { data: { title: string; description: string; phase: Phase } }) {
   const colors = phaseColors[data.phase];
   return (
     <div
@@ -101,9 +104,10 @@ function CustomNode({ data }: { data: { title: string; description: string; phas
       </div>
     </div>
   );
-}
+});
 
-function NoteNode({ data }: { data: { content: string; color: { bg: string; border: string } } }) {
+// ⚡ Bolt Optimization: Wrap React Flow note nodes in React.memo
+const NoteNode = React.memo(function NoteNode({ data }: { data: { content: string; color: { bg: string; border: string } } }) {
   return (
     <div
       className="note-node"
@@ -115,7 +119,7 @@ function NoteNode({ data }: { data: { content: string; color: { bg: string; bord
       <pre>{data.content}</pre>
     </div>
   );
-}
+});
 
 const nodeTypes = { custom: CustomNode, note: NoteNode };
 
@@ -247,7 +251,7 @@ function App() {
   const [visibleCount, setVisibleCount] = useState(1);
   const nodePositions = useRef<{ [key: string]: { x: number; y: number } }>({ ...positions });
 
-  const initialNodes = useMemo(() => getNodes(1, nodePositions.current), []);
+  const initialNodes = useMemo(() => getNodes(1, positions), []);
   const initialEdges = useMemo(() => edgeConnections.map((conn, index) =>
     createEdge(conn, index < 0)
   ), []);
