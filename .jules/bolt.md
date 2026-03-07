@@ -1,0 +1,3 @@
+## 2024-05-18 - [React Flow Custom Nodes Memoization]
+**Learning:** React Flow updates flow state frequently, and if custom nodes are not wrapped in `React.memo`, they re-render unnecessarily on almost any state update (e.g. selection, dragging).
+**Action:** Always wrap `ReactFlow` custom nodes (`nodeTypes`) in `React.memo` to prevent re-renders when their own props haven't changed. This applies universally to components rendering React Flow's custom node definitions.
