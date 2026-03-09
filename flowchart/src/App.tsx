@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef, useMemo } from 'react';
+import { useCallback, useState, useRef, useMemo, useEffect } from 'react';
 import type { Node, Edge, NodeChange, EdgeChange, Connection } from '@xyflow/react';
 import {
   ReactFlow,
@@ -245,6 +245,9 @@ const getEdgeVisibility = (conn: typeof edgeConnections[0], visibleStepCount: nu
 
 function App() {
   const [visibleCount, setVisibleCount] = useState(1);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(false);
+  const [isClosed, setIsClosed] = useState(false);
   const nodePositions = useRef<{ [key: string]: { x: number; y: number } }>({ ...positions });
 
   const initialNodes = useMemo(() => getNodes(1, nodePositions.current), []);
@@ -323,8 +326,56 @@ function App() {
     setEdges(edgeConnections.map((conn, index) => createEdge(conn, index < 0)));
   }, [setNodes, setEdges]);
 
+  const handleMinimize = useCallback(() => {
+    setIsMinimized(prev => !prev);
+  }, []);
+
+  const handleMaximize = useCallback(() => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen();
+    }
+  }, []);
+
+  const handleClose = useCallback(() => {
+    const confirmed = window.confirm(
+      'The text in the Untitled file has changed.\n\nClose without saving?'
+    );
+    if (confirmed) {
+      setIsClosed(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      setIsMaximized(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
+  }, []);
+
+  if (isClosed) {
+    return (
+      <div className="notepad-window notepad-window--closed">
+        <div className="title-bar">
+          <div className="title-text">
+            <img src="/vite.svg" alt="" style={{ height: 12, marginRight: 4, verticalAlign: 'middle' }} />
+            Untitled - Notepad
+          </div>
+          <div className="title-controls">
+            <div className="title-btn" style={{ opacity: 0.4 }}>_</div>
+            <div className="title-btn" style={{ opacity: 0.4 }}>□</div>
+            <div className="title-btn" onClick={() => setIsClosed(false)}>X</div>
+          </div>
+        </div>
+        <div className="notepad-closed-msg">It's gone. It's really gone.</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="notepad-window">
+    <div className={`notepad-window${isMinimized ? ' notepad-window--minimized' : ''}${isMaximized ? ' notepad-window--maximized' : ''}`}>
       {/* Title Bar */}
       <div className="title-bar">
         <div className="title-text">
@@ -332,9 +383,9 @@ function App() {
           Untitled - Notepad
         </div>
         <div className="title-controls">
-          <div className="title-btn" onClick={() => { }}>_</div>
-          <div className="title-btn" onClick={() => { }}>□</div>
-          <div className="title-btn" onClick={() => { }}>X</div>
+          <div className="title-btn" onClick={handleMinimize}>_</div>
+          <div className="title-btn" onClick={handleMaximize}>□</div>
+          <div className="title-btn" onClick={handleClose}>X</div>
         </div>
       </div>
 

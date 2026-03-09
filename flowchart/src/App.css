@@ -160,3 +160,40 @@
   width: 100%;
   height: 100%;
 }
+
+/* Minimized state - collapse to title bar only */
+.notepad-window--minimized {
+  height: auto;
+}
+.notepad-window--minimized .menu-bar,
+.notepad-window--minimized .text-area-container,
+.notepad-window--minimized .status-bar {
+  display: none;
+}
+
+/* Maximized state - fill viewport */
+.notepad-window--maximized {
+  width: 100vw;
+  height: 100vh;
+  box-shadow: none;
+  border: none;
+}
+
+/* Closed state */
+.notepad-window--closed {
+  height: auto;
+}
+.notepad-closed-msg {
+  padding: 20px;
+  font-family: Consolas, monospace;
+  font-size: 13px;
+  color: #555;
+  background: #c0c0c0;
+  text-align: center;
+  border-top: 1px solid #808080;
+}
+
+/* Title button press effect */
+.title-btn:active {
+  border-color: #404040 #dfdfdf #dfdfdf #404040;
+}
