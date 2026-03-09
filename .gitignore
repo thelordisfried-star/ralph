@@ -6,5 +6,11 @@ progress.txt
 # Archive is optional to commit
 # archive/
 
+# Riley index data (generated — do not commit)
+.riley/index/
+.riley/manifest.txt
+.riley/context.md
+.riley/index.json
+
 # OS files
 .DS_Store
