@@ -1,0 +1,3 @@
+## 2024-03-24 - React Flow Component Memoization & Referential Stability
+**Learning:** Using `React.memo` on custom node components in `@xyflow/react` is highly effective but only if the `data` and `style` props are referentially stable. Before this, new inline objects in the `data` and `style` props (during mapping arrays to create nodes/edges) forced `ReactFlow` and custom components to re-render every time nodes changed.
+**Action:** Always extract configuration objects (like `fitViewOptions`, `deleteKeyCode`), node styles (`CSSProperties`), and static component data into module-level variables (or static precomputed Maps) when passing them to `ReactFlow` components or Node factories.
