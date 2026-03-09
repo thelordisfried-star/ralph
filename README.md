@@ -104,9 +104,9 @@ Ralph will:
 
 ## Flowchart
 
-[![Ralph Flowchart](ralph-flowchart.png)](https://snarktank.github.io/ralph/)
+[![Ralph Flowchart](ralph-flowchart.png)](https://thelordisfried-star.github.io/ralph/)
 
-**[View Interactive Flowchart](https://snarktank.github.io/ralph/)** - Click through to see each step with animations.
+**[View Interactive Flowchart](https://thelordisfried-star.github.io/ralph/)** - Click through to see each step with animations.
 
 The `flowchart/` directory contains the source code. To run locally:
 
