@@ -1,0 +1,3 @@
+## 2025-03-12 - [React Flow Node Performance]
+**Learning:** In React Flow, when the internal graph state updates (pan, zoom, add nodes/edges), all custom node components will re-render unless explicitly memoized. Additionally, avoiding `useRef.current` access during component render (like passing to `useMemo` dependency arrays or functions directly during initialization) is required in strict React setups to prevent ESLint errors (`Cannot access refs during render`).
+**Action:** Always wrap custom node components in `@xyflow/react` with `React.memo` to prevent global re-renders. Use stable external constants (like `positions`) for initial `useMemo` computations rather than mutable ref current values.
