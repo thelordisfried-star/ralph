@@ -1,5 +1,6 @@
-import { useCallback, useState, useRef, useMemo } from 'react';
+import React, { useCallback, useState, useRef, useMemo } from 'react';
 import type { Node, Edge, NodeChange, EdgeChange, Connection } from '@xyflow/react';
+import type { CSSProperties } from 'react';
 import {
   ReactFlow,
   useNodesState,
@@ -77,7 +78,9 @@ iterations learn from this one.`,
   },
 ];
 
-function CustomNode({ data }: { data: { title: string; description: string; phase: Phase } }) {
+// ⚡ Bolt Optimization: Wrapped node components with React.memo
+// Impact: Prevents expensive full-tree re-renders of custom nodes during global graph state updates (pan, zoom, select)
+const CustomNode = React.memo(function CustomNode({ data }: { data: { title: string; description: string; phase: Phase } }) {
   const colors = phaseColors[data.phase];
   return (
     <div
@@ -101,9 +104,11 @@ function CustomNode({ data }: { data: { title: string; description: string; phas
       </div>
     </div>
   );
-}
+});
 
-function NoteNode({ data }: { data: { content: string; color: { bg: string; border: string } } }) {
+// ⚡ Bolt Optimization: Wrapped node components with React.memo
+// Impact: Prevents expensive full-tree re-renders of custom nodes during global graph state updates (pan, zoom, select)
+const NoteNode = React.memo(function NoteNode({ data }: { data: { content: string; color: { bg: string; border: string } } }) {
   return (
     <div
       className="note-node"
@@ -115,11 +120,39 @@ function NoteNode({ data }: { data: { content: string; color: { bg: string; bord
       <pre>{data.content}</pre>
     </div>
   );
-}
+});
 
 const nodeTypes = { custom: CustomNode, note: NoteNode };
 
 const stepIndexMap = new Map(allSteps.map((s, i) => [s.id, i]));
+
+// ⚡ Bolt Optimization: Extracted styles to module level to prevent recreating objects on every render
+// Impact: Reduces GC pressure and prevents unnecessary ReactFlow re-renders
+const visibleStepStyle: CSSProperties = { width: nodeWidth, height: nodeHeight, opacity: 1, transition: 'opacity 0.5s ease-in-out', pointerEvents: 'auto' };
+const hiddenStepStyle: CSSProperties = { width: nodeWidth, height: nodeHeight, opacity: 0, transition: 'opacity 0.5s ease-in-out', pointerEvents: 'none' };
+const visibleNoteStyle: CSSProperties = { opacity: 1, transition: 'opacity 0.5s ease-in-out', pointerEvents: 'auto' };
+const hiddenNoteStyle: CSSProperties = { opacity: 0, transition: 'opacity 0.5s ease-in-out', pointerEvents: 'none' };
+
+// ⚡ Bolt Optimization: Extracted ReactFlow configuration props to module level
+// Impact: Ensures referential stability and prevents ReactFlow from re-initializing internal state
+const fitViewOptions = { padding: 0.2 };
+const deleteKeyCode = ['Backspace', 'Delete'];
+
+// ⚡ Bolt Optimization: Pre-compute static data objects for nodes using mutation-based reduce
+// Impact: Prevents O(N) object allocations per render, providing stable object references to avoid React Flow re-renders
+const stepDataMap = allSteps.reduce((acc, step) => {
+  acc[step.id] = {
+    title: step.label,
+    description: step.description,
+    phase: step.phase,
+  };
+  return acc;
+}, {} as Record<string, { title: string; description: string; phase: Phase }>);
+
+const noteDataMap = notes.reduce((acc, note) => {
+  acc[note.id] = { content: note.content, color: note.color };
+  return acc;
+}, {} as Record<string, { content: string; color: { bg: string; border: string } }>);
 
 const positions: { [key: string]: { x: number; y: number } } = {
   // Vertical setup flow on the left
@@ -160,18 +193,8 @@ function createNode(step: typeof allSteps[0], visible: boolean, position?: { x: 
     id: step.id,
     type: 'custom',
     position: position || positions[step.id],
-    data: {
-      title: step.label,
-      description: step.description,
-      phase: step.phase,
-    },
-    style: {
-      width: nodeWidth,
-      height: nodeHeight,
-      opacity: visible ? 1 : 0,
-      transition: 'opacity 0.5s ease-in-out',
-      pointerEvents: visible ? 'auto' : 'none',
-    },
+    data: stepDataMap[step.id],
+    style: visible ? visibleStepStyle : hiddenStepStyle,
   };
 }
 
@@ -214,12 +237,8 @@ function createNoteNode(note: typeof notes[0], visible: boolean, position?: { x:
     id: note.id,
     type: 'note',
     position: position || positions[note.id],
-    data: { content: note.content, color: note.color },
-    style: {
-      opacity: visible ? 1 : 0,
-      transition: 'opacity 0.5s ease-in-out',
-      pointerEvents: visible ? 'auto' : 'none',
-    },
+    data: noteDataMap[note.id],
+    style: visible ? visibleNoteStyle : hiddenNoteStyle,
     draggable: true,
     selectable: false,
     connectable: false,
@@ -247,7 +266,9 @@ function App() {
   const [visibleCount, setVisibleCount] = useState(1);
   const nodePositions = useRef<{ [key: string]: { x: number; y: number } }>({ ...positions });
 
-  const initialNodes = useMemo(() => getNodes(1, nodePositions.current), []);
+  // ⚡ Bolt Optimization: Use the module-level 'positions' constant for initialization
+  // Impact: Prevents ESLint 'react-hooks/refs' error ("Cannot access refs during render") while preserving correct initialization behavior
+  const initialNodes = useMemo(() => getNodes(1, positions), []);
   const initialEdges = useMemo(() => edgeConnections.map((conn, index) =>
     createEdge(conn, index < 0)
   ), []);
@@ -358,12 +379,12 @@ function App() {
           onConnect={onConnect}
           onReconnect={onReconnect}
           fitView
-          fitViewOptions={{ padding: 0.2 }}
+          fitViewOptions={fitViewOptions}
           nodesDraggable={true}
           nodesConnectable={true}
           edgesReconnectable={true}
           elementsSelectable={true}
-          deleteKeyCode={['Backspace', 'Delete']}
+          deleteKeyCode={deleteKeyCode}
           panOnDrag={true}
           panOnScroll={true}
           zoomOnScroll={true}
