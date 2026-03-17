@@ -1,4 +1,5 @@
-import { useCallback, useState, useRef, useMemo } from 'react';
+import React, { useCallback, useState, useRef, useMemo } from 'react';
+import type { CSSProperties } from 'react';
 import type { Node, Edge, NodeChange, EdgeChange, Connection } from '@xyflow/react';
 import {
   ReactFlow,
@@ -77,7 +78,7 @@ iterations learn from this one.`,
   },
 ];
 
-function CustomNode({ data }: { data: { title: string; description: string; phase: Phase } }) {
+const CustomNode = React.memo(function CustomNode({ data }: { data: { title: string; description: string; phase: Phase } }) {
   const colors = phaseColors[data.phase];
   return (
     <div
@@ -101,9 +102,10 @@ function CustomNode({ data }: { data: { title: string; description: string; phas
       </div>
     </div>
   );
-}
 
-function NoteNode({ data }: { data: { content: string; color: { bg: string; border: string } } }) {
+});
+
+const NoteNode = React.memo(function NoteNode({ data }: { data: { content: string; color: { bg: string; border: string } } }) {
   return (
     <div
       className="note-node"
@@ -115,7 +117,8 @@ function NoteNode({ data }: { data: { content: string; color: { bg: string; bord
       <pre>{data.content}</pre>
     </div>
   );
-}
+
+});
 
 const nodeTypes = { custom: CustomNode, note: NoteNode };
 
@@ -155,23 +158,95 @@ const edgeConnections: { source: string; target: string; sourceHandle?: string; 
   { source: '9', target: '10', sourceHandle: 'bottom', targetHandle: 'top', label: 'No' },
 ];
 
+
+
+// ⚡ Bolt Optimization: Extracted styles to module level constants to prevent defeating React.memo()
+const visibleStepStyle: CSSProperties = {
+  width: nodeWidth,
+  height: nodeHeight,
+  opacity: 1,
+  transition: 'opacity 0.5s ease-in-out',
+  pointerEvents: 'auto',
+};
+
+const hiddenStepStyle: CSSProperties = {
+  width: nodeWidth,
+  height: nodeHeight,
+  opacity: 0,
+  transition: 'opacity 0.5s ease-in-out',
+  pointerEvents: 'none',
+};
+
+const visibleNoteStyle: CSSProperties = {
+  opacity: 1,
+  transition: 'opacity 0.5s ease-in-out',
+  pointerEvents: 'auto',
+};
+
+const hiddenNoteStyle: CSSProperties = {
+  opacity: 0,
+  transition: 'opacity 0.5s ease-in-out',
+  pointerEvents: 'none',
+};
+
+const visibleEdgeStyle: CSSProperties = {
+  stroke: '#222',
+  strokeWidth: 2,
+  opacity: 1,
+  transition: 'opacity 0.5s ease-in-out',
+};
+
+const hiddenEdgeStyle: CSSProperties = {
+  stroke: '#222',
+  strokeWidth: 2,
+  opacity: 0,
+  transition: 'opacity 0.5s ease-in-out',
+};
+
+const edgeLabelStyle: CSSProperties = {
+  fill: '#222',
+  fontWeight: 600,
+  fontSize: 14,
+};
+
+const edgeLabelBgStyle: CSSProperties = {
+  fill: '#fff',
+  stroke: '#222',
+  strokeWidth: 1,
+};
+
+const edgeLabelBgPadding: [number, number] = [8, 4];
+
+const markerEndConfig = {
+  type: MarkerType.ArrowClosed,
+  color: '#222',
+};
+
+// const defaultConnectionStyle: CSSProperties = { stroke: '#222', strokeWidth: 2 };
+
+// ⚡ Bolt Optimization: Extracted data objects to Map to ensure referential stability
+const stepDataMap = new Map(allSteps.map(step => [step.id, {
+  title: step.label,
+  description: step.description,
+  phase: step.phase,
+}]));
+
+const noteDataMap = new Map(notes.map(note => [note.id, {
+  content: note.content,
+  color: note.color,
+}]));
+
 function createNode(step: typeof allSteps[0], visible: boolean, position?: { x: number; y: number }): Node {
   return {
     id: step.id,
     type: 'custom',
     position: position || positions[step.id],
-    data: {
+    data: stepDataMap.get(step.id) || {
       title: step.label,
       description: step.description,
       phase: step.phase,
     },
-    style: {
-      width: nodeWidth,
-      height: nodeHeight,
-      opacity: visible ? 1 : 0,
-      transition: 'opacity 0.5s ease-in-out',
-      pointerEvents: visible ? 'auto' : 'none',
-    },
+    style: visible ? visibleStepStyle : hiddenStepStyle,
   };
 }
 
@@ -184,28 +259,12 @@ function createEdge(conn: typeof edgeConnections[0], visible: boolean): Edge {
     targetHandle: conn.targetHandle,
     label: visible ? conn.label : undefined,
     animated: visible,
-    style: {
-      stroke: '#222',
-      strokeWidth: 2,
-      opacity: visible ? 1 : 0,
-      transition: 'opacity 0.5s ease-in-out',
-    },
-    labelStyle: {
-      fill: '#222',
-      fontWeight: 600,
-      fontSize: 14,
-    },
+    style: visible ? visibleEdgeStyle : hiddenEdgeStyle,
+    labelStyle: edgeLabelStyle,
     labelShowBg: true,
-    labelBgPadding: [8, 4] as [number, number],
-    labelBgStyle: {
-      fill: '#fff',
-      stroke: '#222',
-      strokeWidth: 1,
-    },
-    markerEnd: {
-      type: MarkerType.ArrowClosed,
-      color: '#222',
-    },
+    labelBgPadding: edgeLabelBgPadding,
+    labelBgStyle: edgeLabelBgStyle,
+    markerEnd: markerEndConfig,
   };
 }
 
@@ -214,12 +273,8 @@ function createNoteNode(note: typeof notes[0], visible: boolean, position?: { x:
     id: note.id,
     type: 'note',
     position: position || positions[note.id],
-    data: { content: note.content, color: note.color },
-    style: {
-      opacity: visible ? 1 : 0,
-      transition: 'opacity 0.5s ease-in-out',
-      pointerEvents: visible ? 'auto' : 'none',
-    },
+    data: noteDataMap.get(note.id) || { content: note.content, color: note.color },
+    style: visible ? visibleNoteStyle : hiddenNoteStyle,
     draggable: true,
     selectable: false,
     connectable: false,
@@ -230,6 +285,7 @@ const getNodes = (count: number, currentPositions: { [key: string]: { x: number;
   const stepNodes = allSteps.map((step, index) =>
     createNode(step, index < count, currentPositions[step.id])
   );
+
   const noteNodes = notes.map(note => {
     const noteVisible = count >= note.appearsWithStep;
     return createNoteNode(note, noteVisible, currentPositions[note.id]);
@@ -243,11 +299,15 @@ const getEdgeVisibility = (conn: typeof edgeConnections[0], visibleStepCount: nu
   return sourceIndex < visibleStepCount && targetIndex < visibleStepCount;
 };
 
+// ⚡ Bolt Optimization: Extract arrays/objects to prevent React Flow re-renders
+const fitViewOptionsConfig = { padding: 0.2 };
+const deleteKeyCodeConfig = ['Backspace', 'Delete'];
+
 function App() {
   const [visibleCount, setVisibleCount] = useState(1);
   const nodePositions = useRef<{ [key: string]: { x: number; y: number } }>({ ...positions });
 
-  const initialNodes = useMemo(() => getNodes(1, nodePositions.current), []);
+  const initialNodes = useMemo(() => getNodes(1, positions), []);
   const initialEdges = useMemo(() => edgeConnections.map((conn, index) =>
     createEdge(conn, index < 0)
   ), []);
@@ -267,12 +327,14 @@ function App() {
     [setNodes]
   );
 
+
   const onEdgesChange = useCallback(
     (changes: EdgeChange[]) => {
       setEdges((eds) => applyEdgeChanges(changes, eds));
     },
     [setEdges]
   );
+
 
   const onConnect = useCallback(
     (connection: Connection) => {
@@ -281,12 +343,14 @@ function App() {
     [setEdges]
   );
 
+
   const onReconnect = useCallback(
     (oldEdge: Edge, newConnection: Connection) => {
       setEdges((eds) => reconnectEdge(oldEdge, newConnection, eds));
     },
     [setEdges]
   );
+
 
   const handleNext = useCallback(() => {
     if (visibleCount < allSteps.length) {
@@ -299,6 +363,7 @@ function App() {
           createEdge(conn, getEdgeVisibility(conn, newCount))
         )
       );
+
     }
   }, [visibleCount, setNodes, setEdges]);
 
@@ -313,6 +378,7 @@ function App() {
           createEdge(conn, getEdgeVisibility(conn, newCount))
         )
       );
+
     }
   }, [visibleCount, setNodes, setEdges]);
 
@@ -358,12 +424,12 @@ function App() {
           onConnect={onConnect}
           onReconnect={onReconnect}
           fitView
-          fitViewOptions={{ padding: 0.2 }}
+          fitViewOptions={fitViewOptionsConfig}
           nodesDraggable={true}
           nodesConnectable={true}
           edgesReconnectable={true}
           elementsSelectable={true}
-          deleteKeyCode={['Backspace', 'Delete']}
+          deleteKeyCode={deleteKeyCodeConfig}
           panOnDrag={true}
           panOnScroll={true}
           zoomOnScroll={true}
@@ -402,6 +468,7 @@ function App() {
       </div>
     </div>
   );
+
 }
 
 export default App;
