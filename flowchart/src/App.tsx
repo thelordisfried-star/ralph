@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { useCallback, useState, useRef, useMemo } from 'react';
 import type { Node, Edge, NodeChange, EdgeChange, Connection } from '@xyflow/react';
 import {
@@ -155,23 +156,22 @@ const edgeConnections: { source: string; target: string; sourceHandle?: string; 
   { source: '9', target: '10', sourceHandle: 'bottom', targetHandle: 'top', label: 'No' },
 ];
 
+// ⚡ Bolt Optimization: Pre-compute static data maps and style constants to prevent referential instability in node creation, maximizing React.memo benefits.
+const stepDataMap = allSteps.reduce((acc, step) => {
+  acc[step.id] = { title: step.label, description: step.description, phase: step.phase };
+  return acc;
+}, {} as Record<string, { title: string; description: string; phase: Phase }>);
+
+const visibleStepStyle: CSSProperties = { width: nodeWidth, height: nodeHeight, opacity: 1, transition: 'opacity 0.5s ease-in-out', pointerEvents: 'auto' };
+const hiddenStepStyle: CSSProperties = { width: nodeWidth, height: nodeHeight, opacity: 0, transition: 'opacity 0.5s ease-in-out', pointerEvents: 'none' };
+
 function createNode(step: typeof allSteps[0], visible: boolean, position?: { x: number; y: number }): Node {
   return {
     id: step.id,
     type: 'custom',
     position: position || positions[step.id],
-    data: {
-      title: step.label,
-      description: step.description,
-      phase: step.phase,
-    },
-    style: {
-      width: nodeWidth,
-      height: nodeHeight,
-      opacity: visible ? 1 : 0,
-      transition: 'opacity 0.5s ease-in-out',
-      pointerEvents: visible ? 'auto' : 'none',
-    },
+    data: stepDataMap[step.id],
+    style: visible ? visibleStepStyle : hiddenStepStyle,
   };
 }
 
@@ -209,17 +209,21 @@ function createEdge(conn: typeof edgeConnections[0], visible: boolean): Edge {
   };
 }
 
+const noteDataMap = notes.reduce((acc, note) => {
+  acc[note.id] = { content: note.content, color: note.color };
+  return acc;
+}, {} as Record<string, { content: string; color: { bg: string; border: string } }>);
+
+const visibleNoteStyle: CSSProperties = { opacity: 1, transition: 'opacity 0.5s ease-in-out', pointerEvents: 'auto' };
+const hiddenNoteStyle: CSSProperties = { opacity: 0, transition: 'opacity 0.5s ease-in-out', pointerEvents: 'none' };
+
 function createNoteNode(note: typeof notes[0], visible: boolean, position?: { x: number; y: number }): Node {
   return {
     id: note.id,
     type: 'note',
     position: position || positions[note.id],
-    data: { content: note.content, color: note.color },
-    style: {
-      opacity: visible ? 1 : 0,
-      transition: 'opacity 0.5s ease-in-out',
-      pointerEvents: visible ? 'auto' : 'none',
-    },
+    data: noteDataMap[note.id],
+    style: visible ? visibleNoteStyle : hiddenNoteStyle,
     draggable: true,
     selectable: false,
     connectable: false,
@@ -243,11 +247,15 @@ const getEdgeVisibility = (conn: typeof edgeConnections[0], visibleStepCount: nu
   return sourceIndex < visibleStepCount && targetIndex < visibleStepCount;
 };
 
+// ⚡ Bolt Optimization: Extracted inline props to module-level constants to ensure referential stability.
+const fitViewOptions = { padding: 0.2 };
+const deleteKeyCode = ['Backspace', 'Delete'];
+
 function App() {
   const [visibleCount, setVisibleCount] = useState(1);
   const nodePositions = useRef<{ [key: string]: { x: number; y: number } }>({ ...positions });
 
-  const initialNodes = useMemo(() => getNodes(1, nodePositions.current), []);
+  const initialNodes = useMemo(() => getNodes(1, positions), []);
   const initialEdges = useMemo(() => edgeConnections.map((conn, index) =>
     createEdge(conn, index < 0)
   ), []);
@@ -358,12 +366,12 @@ function App() {
           onConnect={onConnect}
           onReconnect={onReconnect}
           fitView
-          fitViewOptions={{ padding: 0.2 }}
+          fitViewOptions={fitViewOptions}
           nodesDraggable={true}
           nodesConnectable={true}
           edgesReconnectable={true}
           elementsSelectable={true}
-          deleteKeyCode={['Backspace', 'Delete']}
+          deleteKeyCode={deleteKeyCode}
           panOnDrag={true}
           panOnScroll={true}
           zoomOnScroll={true}
