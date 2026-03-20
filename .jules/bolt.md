@@ -1,0 +1,3 @@
+## 2024-03-24 - React Flow Prop Stability & ESLint Rules
+**Learning:** Custom nodes (`CustomNode`, `NoteNode`) in React Flow re-render frequently during pan/zoom if their definitions aren't wrapped in `React.memo()`. Furthermore, inline styles/data prop objects assigned during map functions cause severe GC pressure and break memoization. Passing `useRef.current` directly to `useMemo` initializers violates strict mode and eslint hooks rules ("Cannot access refs during render").
+**Action:** Always wrap custom flow nodes in `React.memo()`. Extract `data` and `style` props into statically-typed external constants or memoized maps using `.reduce()`. Use static fallback variables instead of `ref.current` during initial state generation.
