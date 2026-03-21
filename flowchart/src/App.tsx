@@ -237,17 +237,29 @@ const getNodes = (count: number, currentPositions: { [key: string]: { x: number;
   return [...stepNodes, ...noteNodes];
 };
 
-const getEdgeVisibility = (conn: typeof edgeConnections[0], visibleStepCount: number) => {
+const getEdgeVisibility = (conn: typeof edgeConnections[0] | Edge, visibleStepCount: number) => {
   const sourceIndex = stepIndexMap.get(conn.source) ?? -1;
   const targetIndex = stepIndexMap.get(conn.target) ?? -1;
   return sourceIndex < visibleStepCount && targetIndex < visibleStepCount;
+};
+
+const isNodeVisible = (id: string, count: number) => {
+  const stepIndex = stepIndexMap.get(id);
+  if (stepIndex !== undefined) {
+    return stepIndex < count;
+  }
+  const note = notes.find(n => n.id === id);
+  if (note) {
+    return count >= note.appearsWithStep;
+  }
+  return false;
 };
 
 function App() {
   const [visibleCount, setVisibleCount] = useState(1);
   const nodePositions = useRef<{ [key: string]: { x: number; y: number } }>({ ...positions });
 
-  const initialNodes = useMemo(() => getNodes(1, nodePositions.current), []);
+  const initialNodes = useMemo(() => getNodes(1, positions), []);
   const initialEdges = useMemo(() => edgeConnections.map((conn, index) =>
     createEdge(conn, index < 0)
   ), []);
@@ -293,12 +305,34 @@ function App() {
       const newCount = visibleCount + 1;
       setVisibleCount(newCount);
 
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      // ⚡ Bolt Optimization: Update existing nodes/edges instead of recreating them
+      setNodes((nds) => nds.map((node) => {
+        const visible = isNodeVisible(node.id, newCount);
+        // Only update if visibility changed to avoid unnecessary re-renders
+        if ((node.style?.opacity === 1) === visible) return node;
+        return {
+          ...node,
+          style: {
+            ...node.style,
+            opacity: visible ? 1 : 0,
+            pointerEvents: visible ? 'auto' : 'none',
+          }
+        };
+      }));
+
+      setEdges((eds) => eds.map((edge) => {
+        const visible = getEdgeVisibility(edge, newCount);
+        if ((edge.style?.opacity === 1) === visible) return edge;
+        return {
+          ...edge,
+          animated: visible,
+          label: visible ? edgeConnections.find(c => c.source === edge.source && c.target === edge.target)?.label : undefined,
+          style: {
+            ...edge.style,
+            opacity: visible ? 1 : 0,
+          }
+        };
+      }));
     }
   }, [visibleCount, setNodes, setEdges]);
 
@@ -307,20 +341,66 @@ function App() {
       const newCount = visibleCount - 1;
       setVisibleCount(newCount);
 
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      // ⚡ Bolt Optimization: Update existing nodes/edges instead of recreating them
+      setNodes((nds) => nds.map((node) => {
+        const visible = isNodeVisible(node.id, newCount);
+        if ((node.style?.opacity === 1) === visible) return node;
+        return {
+          ...node,
+          style: {
+            ...node.style,
+            opacity: visible ? 1 : 0,
+            pointerEvents: visible ? 'auto' : 'none',
+          }
+        };
+      }));
+
+      setEdges((eds) => eds.map((edge) => {
+        const visible = getEdgeVisibility(edge, newCount);
+        if ((edge.style?.opacity === 1) === visible) return edge;
+        return {
+          ...edge,
+          animated: visible,
+          label: visible ? edgeConnections.find(c => c.source === edge.source && c.target === edge.target)?.label : undefined,
+          style: {
+            ...edge.style,
+            opacity: visible ? 1 : 0,
+          }
+        };
+      }));
     }
   }, [visibleCount, setNodes, setEdges]);
 
   const handleReset = useCallback(() => {
     setVisibleCount(1);
     nodePositions.current = { ...positions };
-    setNodes(getNodes(1, nodePositions.current));
-    setEdges(edgeConnections.map((conn, index) => createEdge(conn, index < 0)));
+
+    // ⚡ Bolt Optimization: Update existing nodes/edges instead of recreating them
+    setNodes((nds) => nds.map((node) => {
+      const visible = isNodeVisible(node.id, 1);
+      return {
+        ...node,
+        position: positions[node.id] || node.position,
+        style: {
+          ...node.style,
+          opacity: visible ? 1 : 0,
+          pointerEvents: visible ? 'auto' : 'none',
+        }
+      };
+    }));
+
+    setEdges((eds) => eds.map((edge, index) => {
+      const visible = index < 0; // The original code had index < 0, meaning all edges invisible on reset
+      return {
+        ...edge,
+        animated: visible,
+        label: visible ? edgeConnections.find(c => c.source === edge.source && c.target === edge.target)?.label : undefined,
+        style: {
+          ...edge.style,
+          opacity: visible ? 1 : 0,
+        }
+      };
+    }));
   }, [setNodes, setEdges]);
 
   return (
