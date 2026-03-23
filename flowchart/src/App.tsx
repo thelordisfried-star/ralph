@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef, useMemo } from 'react';
+import { useCallback, useState, useRef, useMemo, memo } from 'react';
 import type { Node, Edge, NodeChange, EdgeChange, Connection } from '@xyflow/react';
 import {
   ReactFlow,
@@ -77,7 +77,9 @@ iterations learn from this one.`,
   },
 ];
 
-function CustomNode({ data }: { data: { title: string; description: string; phase: Phase } }) {
+// ⚡ Bolt Optimization: Wrap CustomNode in React.memo to prevent unnecessary re-renders on graph state updates (pan/zoom)
+// Expected impact: Significant reduction in re-renders during interaction
+const CustomNode = memo(function CustomNode({ data }: { data: { title: string; description: string; phase: Phase } }) {
   const colors = phaseColors[data.phase];
   return (
     <div
@@ -101,9 +103,11 @@ function CustomNode({ data }: { data: { title: string; description: string; phas
       </div>
     </div>
   );
-}
+});
 
-function NoteNode({ data }: { data: { content: string; color: { bg: string; border: string } } }) {
+// ⚡ Bolt Optimization: Wrap NoteNode in React.memo to prevent unnecessary re-renders on graph state updates (pan/zoom)
+// Expected impact: Significant reduction in re-renders during interaction
+const NoteNode = memo(function NoteNode({ data }: { data: { content: string; color: { bg: string; border: string } } }) {
   return (
     <div
       className="note-node"
@@ -115,7 +119,7 @@ function NoteNode({ data }: { data: { content: string; color: { bg: string; bord
       <pre>{data.content}</pre>
     </div>
   );
-}
+});
 
 const nodeTypes = { custom: CustomNode, note: NoteNode };
 
@@ -247,7 +251,9 @@ function App() {
   const [visibleCount, setVisibleCount] = useState(1);
   const nodePositions = useRef<{ [key: string]: { x: number; y: number } }>({ ...positions });
 
-  const initialNodes = useMemo(() => getNodes(1, nodePositions.current), []);
+  // ⚡ Bolt Optimization: Use module-level `positions` instead of ref during render to fix linter and ensure referential stability
+  // Expected impact: Prevents react-hooks/refs warning and avoids potential render inconsistencies
+  const initialNodes = useMemo(() => getNodes(1, positions), []);
   const initialEdges = useMemo(() => edgeConnections.map((conn, index) =>
     createEdge(conn, index < 0)
   ), []);
