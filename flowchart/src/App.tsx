@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef, useMemo } from 'react';
+import React, { useCallback, useState, useRef, useMemo } from 'react';
 import type { Node, Edge, NodeChange, EdgeChange, Connection } from '@xyflow/react';
 import {
   ReactFlow,
@@ -77,7 +77,12 @@ iterations learn from this one.`,
   },
 ];
 
-function CustomNode({ data }: { data: { title: string; description: string; phase: Phase } }) {
+// ⚡ Bolt Optimization: Wrap CustomNode in React.memo
+// What: Wrap CustomNode and NoteNode in React.memo
+// Why: React Flow triggers re-renders for nodes when internal state changes (pan/zoom). Memoizing prevents unnecessary global re-renders.
+// Impact: Significantly reduces React render cycle overhead during graph interaction.
+// Measurement: Profile React renders during panning; should observe zero CustomNode re-renders.
+const CustomNode = React.memo(function CustomNode({ data }: { data: { title: string; description: string; phase: Phase } }) {
   const colors = phaseColors[data.phase];
   return (
     <div
@@ -101,9 +106,14 @@ function CustomNode({ data }: { data: { title: string; description: string; phas
       </div>
     </div>
   );
-}
+});
 
-function NoteNode({ data }: { data: { content: string; color: { bg: string; border: string } } }) {
+// ⚡ Bolt Optimization: Wrap NoteNode in React.memo
+// What: Wrap CustomNode and NoteNode in React.memo
+// Why: React Flow triggers re-renders for nodes when internal state changes (pan/zoom). Memoizing prevents unnecessary global re-renders.
+// Impact: Significantly reduces React render cycle overhead during graph interaction.
+// Measurement: Profile React renders during panning; should observe zero NoteNode re-renders.
+const NoteNode = React.memo(function NoteNode({ data }: { data: { content: string; color: { bg: string; border: string } } }) {
   return (
     <div
       className="note-node"
@@ -115,7 +125,7 @@ function NoteNode({ data }: { data: { content: string; color: { bg: string; bord
       <pre>{data.content}</pre>
     </div>
   );
-}
+});
 
 const nodeTypes = { custom: CustomNode, note: NoteNode };
 
@@ -243,11 +253,24 @@ const getEdgeVisibility = (conn: typeof edgeConnections[0], visibleStepCount: nu
   return sourceIndex < visibleStepCount && targetIndex < visibleStepCount;
 };
 
+// ⚡ Bolt Optimization: Extract constant objects for ReactFlow props
+// What: Extract fitViewOptions and deleteKeyCode to module-level constants
+// Why: Prevents new object/array creation on every render which would break React.memo/referential stability
+// Impact: Eliminates unnecessary ReactFlow re-renders
+// Measurement: Profile React renders; App state updates no longer cascade to full ReactFlow re-renders
+const FIT_VIEW_OPTIONS = { padding: 0.2 };
+const DELETE_KEY_CODE = ['Backspace', 'Delete'];
+
 function App() {
   const [visibleCount, setVisibleCount] = useState(1);
   const nodePositions = useRef<{ [key: string]: { x: number; y: number } }>({ ...positions });
 
-  const initialNodes = useMemo(() => getNodes(1, nodePositions.current), []);
+  // ⚡ Bolt Optimization: Use module-level `positions` for initial graph state
+  // What: Replaced nodePositions.current with the constant `positions` inside useMemo
+  // Why: ESLint strict mode disallows accessing React refs during render (or inside useMemo initializers).
+  // Impact: Fixes linter error "Cannot access refs during render" while keeping initialization referentially stable.
+  // Measurement: Linter passes; nodes still initialize correctly.
+  const initialNodes = useMemo(() => getNodes(1, positions), []);
   const initialEdges = useMemo(() => edgeConnections.map((conn, index) =>
     createEdge(conn, index < 0)
   ), []);
@@ -358,12 +381,12 @@ function App() {
           onConnect={onConnect}
           onReconnect={onReconnect}
           fitView
-          fitViewOptions={{ padding: 0.2 }}
+          fitViewOptions={FIT_VIEW_OPTIONS}
           nodesDraggable={true}
           nodesConnectable={true}
           edgesReconnectable={true}
           elementsSelectable={true}
-          deleteKeyCode={['Backspace', 'Delete']}
+          deleteKeyCode={DELETE_KEY_CODE}
           panOnDrag={true}
           panOnScroll={true}
           zoomOnScroll={true}
