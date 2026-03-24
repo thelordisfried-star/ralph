@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef, useMemo } from 'react';
+import { useCallback, useState, useRef, useMemo, memo } from 'react';
 import type { Node, Edge, NodeChange, EdgeChange, Connection } from '@xyflow/react';
 import {
   ReactFlow,
@@ -77,7 +77,9 @@ iterations learn from this one.`,
   },
 ];
 
-function CustomNode({ data }: { data: { title: string; description: string; phase: Phase } }) {
+// ⚡ Bolt Optimization: Added React.memo to CustomNode and NoteNode to prevent unnecessary
+// re-renders during React Flow internal state updates (pan/zoom). Impact: Eliminates O(N) DOM reconciliations per graph interaction.
+const CustomNode = memo(function CustomNode({ data }: { data: { title: string; description: string; phase: Phase } }) {
   const colors = phaseColors[data.phase];
   return (
     <div
@@ -101,9 +103,9 @@ function CustomNode({ data }: { data: { title: string; description: string; phas
       </div>
     </div>
   );
-}
+});
 
-function NoteNode({ data }: { data: { content: string; color: { bg: string; border: string } } }) {
+const NoteNode = memo(function NoteNode({ data }: { data: { content: string; color: { bg: string; border: string } } }) {
   return (
     <div
       className="note-node"
@@ -115,7 +117,7 @@ function NoteNode({ data }: { data: { content: string; color: { bg: string; bord
       <pre>{data.content}</pre>
     </div>
   );
-}
+});
 
 const nodeTypes = { custom: CustomNode, note: NoteNode };
 
@@ -247,7 +249,8 @@ function App() {
   const [visibleCount, setVisibleCount] = useState(1);
   const nodePositions = useRef<{ [key: string]: { x: number; y: number } }>({ ...positions });
 
-  const initialNodes = useMemo(() => getNodes(1, nodePositions.current), []);
+  // Use module-level constant positions instead of nodePositions.current to prevent React hooks ref access warning
+  const initialNodes = useMemo(() => getNodes(1, positions), []);
   const initialEdges = useMemo(() => edgeConnections.map((conn, index) =>
     createEdge(conn, index < 0)
   ), []);
@@ -288,40 +291,97 @@ function App() {
     [setEdges]
   );
 
+  const updateGraphState = useCallback((newCount: number, resetPositions: boolean = false) => {
+    // ⚡ Bolt Optimization: Uses functional state updates to selectively mutate specific properties (opacity, pointerEvents, animated)
+    // instead of recreating entire node/edge arrays on every step change.
+    // Impact: Preserves React's referential equality for unchanged nodes/edges, avoiding full graph remounts/re-renders.
+    if (resetPositions) {
+      nodePositions.current = { ...positions };
+    }
+
+    setNodes((nds) =>
+      nds.map((node) => {
+        let visible = false;
+        if (node.type === 'custom') {
+          const index = stepIndexMap.get(node.id) ?? -1;
+          visible = index < newCount;
+        } else if (node.type === 'note') {
+          const note = notes.find((n) => n.id === node.id);
+          visible = note ? newCount >= note.appearsWithStep : false;
+        }
+
+        const opacity = visible ? 1 : 0;
+        const pointerEvents = visible ? 'auto' : 'none';
+
+        if (
+          node.style?.opacity === opacity &&
+          node.style?.pointerEvents === pointerEvents &&
+          (!resetPositions || node.position === positions[node.id])
+        ) {
+          return node;
+        }
+
+        return {
+          ...node,
+          ...(resetPositions ? { position: positions[node.id] } : {}),
+          style: {
+            ...node.style,
+            opacity,
+            pointerEvents,
+          },
+        };
+      })
+    );
+
+    setEdges((eds) =>
+      eds.map((edge) => {
+        // Parse source/target to find the connection details
+        const conn = edgeConnections.find((c) => c.source === edge.source && c.target === edge.target);
+        if (!conn) return edge;
+
+        const visible = getEdgeVisibility(conn, newCount);
+
+        if (
+          edge.animated === visible &&
+          edge.label === (visible ? conn.label : undefined) &&
+          edge.style?.opacity === (visible ? 1 : 0)
+        ) {
+          return edge;
+        }
+
+        return {
+          ...edge,
+          label: visible ? conn.label : undefined,
+          animated: visible,
+          style: {
+            ...edge.style,
+            opacity: visible ? 1 : 0,
+          },
+        };
+      })
+    );
+  }, [setNodes, setEdges]);
+
   const handleNext = useCallback(() => {
     if (visibleCount < allSteps.length) {
       const newCount = visibleCount + 1;
       setVisibleCount(newCount);
-
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      updateGraphState(newCount);
     }
-  }, [visibleCount, setNodes, setEdges]);
+  }, [visibleCount, updateGraphState]);
 
   const handlePrev = useCallback(() => {
     if (visibleCount > 1) {
       const newCount = visibleCount - 1;
       setVisibleCount(newCount);
-
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      updateGraphState(newCount);
     }
-  }, [visibleCount, setNodes, setEdges]);
+  }, [visibleCount, updateGraphState]);
 
   const handleReset = useCallback(() => {
     setVisibleCount(1);
-    nodePositions.current = { ...positions };
-    setNodes(getNodes(1, nodePositions.current));
-    setEdges(edgeConnections.map((conn, index) => createEdge(conn, index < 0)));
-  }, [setNodes, setEdges]);
+    updateGraphState(1, true);
+  }, [updateGraphState]);
 
   return (
     <div className="notepad-window">
