@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef, useMemo } from 'react';
+import { useCallback, useState, useRef, useMemo, memo } from 'react';
 import type { Node, Edge, NodeChange, EdgeChange, Connection } from '@xyflow/react';
 import {
   ReactFlow,
@@ -77,7 +77,9 @@ iterations learn from this one.`,
   },
 ];
 
-function CustomNode({ data }: { data: { title: string; description: string; phase: Phase } }) {
+// ⚡ Bolt Optimization: Wrap CustomNode in React.memo to prevent unnecessary re-renders on graph pan/zoom
+// Impact: Significantly reduces React render cycle overhead when interacting with the graph
+const CustomNode = memo(function CustomNode({ data }: { data: { title: string; description: string; phase: Phase } }) {
   const colors = phaseColors[data.phase];
   return (
     <div
@@ -101,9 +103,11 @@ function CustomNode({ data }: { data: { title: string; description: string; phas
       </div>
     </div>
   );
-}
+});
 
-function NoteNode({ data }: { data: { content: string; color: { bg: string; border: string } } }) {
+// ⚡ Bolt Optimization: Wrap NoteNode in React.memo to prevent unnecessary re-renders
+// Impact: Prevents global re-renders for note nodes during viewport changes
+const NoteNode = memo(function NoteNode({ data }: { data: { content: string; color: { bg: string; border: string } } }) {
   return (
     <div
       className="note-node"
@@ -115,9 +119,14 @@ function NoteNode({ data }: { data: { content: string; color: { bg: string; bord
       <pre>{data.content}</pre>
     </div>
   );
-}
+});
 
 const nodeTypes = { custom: CustomNode, note: NoteNode };
+
+// ⚡ Bolt Optimization: Extract static ReactFlow options to module scope
+// Impact: Prevents referential instability and unnecessary ReactFlow re-renders
+const FIT_VIEW_OPTIONS = { padding: 0.2 };
+const DELETE_KEY_CODE = ['Backspace', 'Delete'];
 
 const stepIndexMap = new Map(allSteps.map((s, i) => [s.id, i]));
 
@@ -247,7 +256,9 @@ function App() {
   const [visibleCount, setVisibleCount] = useState(1);
   const nodePositions = useRef<{ [key: string]: { x: number; y: number } }>({ ...positions });
 
-  const initialNodes = useMemo(() => getNodes(1, nodePositions.current), []);
+  // ⚡ Bolt Optimization: Replace ref access in useMemo with stable module-level 'positions' map.
+  // Impact: Prevents 'Cannot access refs during render' linter errors while maintaining memoization.
+  const initialNodes = useMemo(() => getNodes(1, positions), []);
   const initialEdges = useMemo(() => edgeConnections.map((conn, index) =>
     createEdge(conn, index < 0)
   ), []);
@@ -358,12 +369,12 @@ function App() {
           onConnect={onConnect}
           onReconnect={onReconnect}
           fitView
-          fitViewOptions={{ padding: 0.2 }}
+          fitViewOptions={FIT_VIEW_OPTIONS}
           nodesDraggable={true}
           nodesConnectable={true}
           edgesReconnectable={true}
           elementsSelectable={true}
-          deleteKeyCode={['Backspace', 'Delete']}
+          deleteKeyCode={DELETE_KEY_CODE}
           panOnDrag={true}
           panOnScroll={true}
           zoomOnScroll={true}
