@@ -1,0 +1,3 @@
+## 2025-02-28 - React Flow Component Render Optimization
+**Learning:** In React Flow, custom node components (`CustomNode`, `NoteNode`) re-render unnecessarily on every graph state change (like pan or zoom) if not wrapped in `React.memo`. Furthermore, if these components receive inline objects or arrays in `data` or `style` props, `React.memo` is defeated due to referential instability, causing excessive GC pressure and layout recalculation.
+**Action:** Always wrap custom node components in `React.memo`. Extract any inline objects passed to `style` or `data` props into static constants (e.g., using `CSSProperties` and `new Map()`) to guarantee referential stability and fully unlock React memoization benefits.
