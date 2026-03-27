@@ -243,11 +243,15 @@ const getEdgeVisibility = (conn: typeof edgeConnections[0], visibleStepCount: nu
   return sourceIndex < visibleStepCount && targetIndex < visibleStepCount;
 };
 
+// ⚡ Bolt Optimization: Extracted static arrays/objects to module-level constants to ensure referential stability and prevent unnecessary React Flow re-renders.
+const fitViewOptions = { padding: 0.2 };
+const deleteKeyCode = ['Backspace', 'Delete'];
+
 function App() {
   const [visibleCount, setVisibleCount] = useState(1);
   const nodePositions = useRef<{ [key: string]: { x: number; y: number } }>({ ...positions });
 
-  const initialNodes = useMemo(() => getNodes(1, nodePositions.current), []);
+  const initialNodes = useMemo(() => getNodes(1, positions), []);
   const initialEdges = useMemo(() => edgeConnections.map((conn, index) =>
     createEdge(conn, index < 0)
   ), []);
@@ -358,12 +362,12 @@ function App() {
           onConnect={onConnect}
           onReconnect={onReconnect}
           fitView
-          fitViewOptions={{ padding: 0.2 }}
+          fitViewOptions={fitViewOptions}
           nodesDraggable={true}
           nodesConnectable={true}
           edgesReconnectable={true}
           elementsSelectable={true}
-          deleteKeyCode={['Backspace', 'Delete']}
+          deleteKeyCode={deleteKeyCode}
           panOnDrag={true}
           panOnScroll={true}
           zoomOnScroll={true}
