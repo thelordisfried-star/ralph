@@ -1,0 +1,3 @@
+## 2024-05-15 - React Flow Render Optimization
+**Learning:** To prevent React Flow from entering cascading render cycles when updating graph state (such as panning or zooming), custom node components must be wrapped in `React.memo()`. Furthermore, to make `memo` effective, the `data` and `style` props passed to the nodes must be referentially stable. Using inline objects, or re-allocating maps inside the render loop breaks memoization.
+**Action:** Always extract configuration data (using mutation-based `reduce` for performance), inline styles (typed with `CSSProperties`), and options arrays/objects (like `fitViewOptions` and `deleteKeyCode`) out to module-level constants. Never pass inline objects directly as React Flow props.
