@@ -1,0 +1,3 @@
+## 2025-03-02 - React Flow Re-render Optimization
+**Learning:** In React Flow applications, node components are frequently subjected to re-renders from global graph state updates (pan, zoom). Not memoizing custom nodes is a significant performance bottleneck. Also, accessing a mutable ref (e.g. `nodePositions.current`) inside a `useMemo` hook runs during the render cycle, which violates React rules and triggers strict-mode warnings.
+**Action:** Always explicitly wrap custom React Flow node definitions (like `CustomNode` or `NoteNode`) with `React.memo` using referentially stable props. When setting up `initialNodes` via `useMemo`, rely on external stable constants instead of mutable refs.
