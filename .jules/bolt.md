@@ -1,0 +1,3 @@
+## 2024-05-18 - React Flow State Updates
+**Learning:** In React Flow, when updating graph state (like visibility of nodes/edges during a visual progression), recreating the entire array using functional mappers instead of modifying the style property of existing node items causes the library to break internal memoization, triggering excessive and expensive DOM unmount/remount cycles.
+**Action:** Always use functional setters with `map()` that return `...node` to selectively update only the modified properties (e.g., `style: { opacity: 1 }`) instead of recreating the whole array structure from scratch.
