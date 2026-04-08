@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef, useMemo } from 'react';
+import { useCallback, useState, useMemo, memo } from 'react';
 import type { Node, Edge, NodeChange, EdgeChange, Connection } from '@xyflow/react';
 import {
   ReactFlow,
@@ -77,7 +77,10 @@ iterations learn from this one.`,
   },
 ];
 
-function CustomNode({ data }: { data: { title: string; description: string; phase: Phase } }) {
+// ⚡ Bolt Optimization: Wrap CustomNode and NoteNode in React.memo to prevent
+// unnecessary re-renders when the internal React Flow graph state updates (pan/zoom).
+// Expected impact: Significant reduction in React render cycle duration.
+const CustomNode = memo(function CustomNode({ data }: { data: { title: string; description: string; phase: Phase } }) {
   const colors = phaseColors[data.phase];
   return (
     <div
@@ -101,9 +104,9 @@ function CustomNode({ data }: { data: { title: string; description: string; phas
       </div>
     </div>
   );
-}
+});
 
-function NoteNode({ data }: { data: { content: string; color: { bg: string; border: string } } }) {
+const NoteNode = memo(function NoteNode({ data }: { data: { content: string; color: { bg: string; border: string } } }) {
   return (
     <div
       className="note-node"
@@ -115,7 +118,7 @@ function NoteNode({ data }: { data: { content: string; color: { bg: string; bord
       <pre>{data.content}</pre>
     </div>
   );
-}
+});
 
 const nodeTypes = { custom: CustomNode, note: NoteNode };
 
@@ -155,23 +158,87 @@ const edgeConnections: { source: string; target: string; sourceHandle?: string; 
   { source: '9', target: '10', sourceHandle: 'bottom', targetHandle: 'top', label: 'No' },
 ];
 
+// ⚡ Bolt Optimization: Extracted inline styles and data objects into static constants and maps
+// to ensure referential stability and reduce garbage collection pressure.
+import type { CSSProperties } from 'react';
+
+const visibleStepStyle: CSSProperties = {
+  width: nodeWidth,
+  height: nodeHeight,
+  opacity: 1,
+  transition: 'opacity 0.5s ease-in-out',
+  pointerEvents: 'auto',
+};
+
+const hiddenStepStyle: CSSProperties = {
+  width: nodeWidth,
+  height: nodeHeight,
+  opacity: 0,
+  transition: 'opacity 0.5s ease-in-out',
+  pointerEvents: 'none',
+};
+
+const visibleNoteStyle: CSSProperties = {
+  opacity: 1,
+  transition: 'opacity 0.5s ease-in-out',
+  pointerEvents: 'auto',
+};
+
+const hiddenNoteStyle: CSSProperties = {
+  opacity: 0,
+  transition: 'opacity 0.5s ease-in-out',
+  pointerEvents: 'none',
+};
+
+const visibleEdgeStyle: CSSProperties = {
+  stroke: '#222',
+  strokeWidth: 2,
+  opacity: 1,
+  transition: 'opacity 0.5s ease-in-out',
+};
+
+const hiddenEdgeStyle: CSSProperties = {
+  stroke: '#222',
+  strokeWidth: 2,
+  opacity: 0,
+  transition: 'opacity 0.5s ease-in-out',
+};
+
+const edgeLabelStyle: CSSProperties = {
+  fill: '#222',
+  fontWeight: 600,
+  fontSize: 14,
+};
+
+const edgeLabelBgPadding: [number, number] = [8, 4];
+const edgeLabelBgStyle: CSSProperties = {
+  fill: '#fff',
+  stroke: '#222',
+  strokeWidth: 1,
+};
+
+const edgeMarkerEnd = {
+  type: MarkerType.ArrowClosed,
+  color: '#222',
+};
+
+const stepDataMap = allSteps.reduce((acc, step) => {
+  acc[step.id] = { title: step.label, description: step.description, phase: step.phase };
+  return acc;
+}, {} as Record<string, { title: string; description: string; phase: Phase }>);
+
+const noteDataMap = notes.reduce((acc, note) => {
+  acc[note.id] = { content: note.content, color: note.color };
+  return acc;
+}, {} as Record<string, { content: string; color: { bg: string; border: string } }>);
+
 function createNode(step: typeof allSteps[0], visible: boolean, position?: { x: number; y: number }): Node {
   return {
     id: step.id,
     type: 'custom',
     position: position || positions[step.id],
-    data: {
-      title: step.label,
-      description: step.description,
-      phase: step.phase,
-    },
-    style: {
-      width: nodeWidth,
-      height: nodeHeight,
-      opacity: visible ? 1 : 0,
-      transition: 'opacity 0.5s ease-in-out',
-      pointerEvents: visible ? 'auto' : 'none',
-    },
+    data: stepDataMap[step.id],
+    style: visible ? visibleStepStyle : hiddenStepStyle,
   };
 }
 
@@ -184,28 +251,12 @@ function createEdge(conn: typeof edgeConnections[0], visible: boolean): Edge {
     targetHandle: conn.targetHandle,
     label: visible ? conn.label : undefined,
     animated: visible,
-    style: {
-      stroke: '#222',
-      strokeWidth: 2,
-      opacity: visible ? 1 : 0,
-      transition: 'opacity 0.5s ease-in-out',
-    },
-    labelStyle: {
-      fill: '#222',
-      fontWeight: 600,
-      fontSize: 14,
-    },
+    style: visible ? visibleEdgeStyle : hiddenEdgeStyle,
+    labelStyle: edgeLabelStyle,
     labelShowBg: true,
-    labelBgPadding: [8, 4] as [number, number],
-    labelBgStyle: {
-      fill: '#fff',
-      stroke: '#222',
-      strokeWidth: 1,
-    },
-    markerEnd: {
-      type: MarkerType.ArrowClosed,
-      color: '#222',
-    },
+    labelBgPadding: edgeLabelBgPadding,
+    labelBgStyle: edgeLabelBgStyle,
+    markerEnd: edgeMarkerEnd,
   };
 }
 
@@ -214,12 +265,8 @@ function createNoteNode(note: typeof notes[0], visible: boolean, position?: { x:
     id: note.id,
     type: 'note',
     position: position || positions[note.id],
-    data: { content: note.content, color: note.color },
-    style: {
-      opacity: visible ? 1 : 0,
-      transition: 'opacity 0.5s ease-in-out',
-      pointerEvents: visible ? 'auto' : 'none',
-    },
+    data: noteDataMap[note.id],
+    style: visible ? visibleNoteStyle : hiddenNoteStyle,
     draggable: true,
     selectable: false,
     connectable: false,
@@ -243,11 +290,19 @@ const getEdgeVisibility = (conn: typeof edgeConnections[0], visibleStepCount: nu
   return sourceIndex < visibleStepCount && targetIndex < visibleStepCount;
 };
 
+// ⚡ Bolt Optimization: Extracted inline props to constants to prevent
+// unnecessary re-renders in ReactFlow component.
+const FIT_VIEW_OPTIONS = { padding: 0.2 };
+const DELETE_KEY_CODE = ['Backspace', 'Delete'];
+
 function App() {
   const [visibleCount, setVisibleCount] = useState(1);
-  const nodePositions = useRef<{ [key: string]: { x: number; y: number } }>({ ...positions });
 
-  const initialNodes = useMemo(() => getNodes(1, nodePositions.current), []);
+  // ⚡ Bolt Optimization: Avoid using React refs (nodePositions.current) for initial
+  // node positions to prevent re-rendering and referential instability issues.
+  // Instead of completely recreating nodes/edges with getNodes, we mutate the styles
+  // of existing nodes/edges through functional setters, preserving memoization.
+  const initialNodes = useMemo(() => getNodes(1, positions), []);
   const initialEdges = useMemo(() => edgeConnections.map((conn, index) =>
     createEdge(conn, index < 0)
   ), []);
@@ -257,11 +312,6 @@ function App() {
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      changes.forEach((change) => {
-        if (change.type === 'position' && change.position) {
-          nodePositions.current[change.id] = change.position;
-        }
-      });
       setNodes((nds) => applyNodeChanges(changes, nds));
     },
     [setNodes]
@@ -288,17 +338,42 @@ function App() {
     [setEdges]
   );
 
+  // ⚡ Bolt Optimization: Use functional setters to selectively modify properties
+  // (styles) of existing node and edge objects instead of recreating arrays,
+  // which avoids unmounting/remounting components and preserves React.memo().
   const handleNext = useCallback(() => {
     if (visibleCount < allSteps.length) {
       const newCount = visibleCount + 1;
       setVisibleCount(newCount);
 
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      setNodes((nds) => nds.map((node) => {
+        const isStep = node.type === 'custom';
+        const isNote = node.type === 'note';
+        let visible = false;
+
+        if (isStep) {
+          const stepIndex = stepIndexMap.get(node.id) ?? -1;
+          visible = stepIndex < newCount;
+          return { ...node, style: visible ? visibleStepStyle : hiddenStepStyle };
+        } else if (isNote) {
+          const noteData = notes.find(n => n.id === node.id);
+          visible = noteData ? newCount >= noteData.appearsWithStep : false;
+          return { ...node, style: visible ? visibleNoteStyle : hiddenNoteStyle };
+        }
+        return node;
+      }));
+
+      setEdges((eds) => eds.map((edge) => {
+        const conn = edgeConnections.find(c => `e${c.source}-${c.target}` === edge.id);
+        if (!conn) return edge;
+        const visible = getEdgeVisibility(conn, newCount);
+        return {
+          ...edge,
+          animated: visible,
+          label: visible ? conn.label : undefined,
+          style: visible ? visibleEdgeStyle : hiddenEdgeStyle
+        };
+      }));
     }
   }, [visibleCount, setNodes, setEdges]);
 
@@ -307,21 +382,44 @@ function App() {
       const newCount = visibleCount - 1;
       setVisibleCount(newCount);
 
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      setNodes((nds) => nds.map((node) => {
+        const isStep = node.type === 'custom';
+        const isNote = node.type === 'note';
+        let visible = false;
+
+        if (isStep) {
+          const stepIndex = stepIndexMap.get(node.id) ?? -1;
+          visible = stepIndex < newCount;
+          return { ...node, style: visible ? visibleStepStyle : hiddenStepStyle };
+        } else if (isNote) {
+          const noteData = notes.find(n => n.id === node.id);
+          visible = noteData ? newCount >= noteData.appearsWithStep : false;
+          return { ...node, style: visible ? visibleNoteStyle : hiddenNoteStyle };
+        }
+        return node;
+      }));
+
+      setEdges((eds) => eds.map((edge) => {
+        const conn = edgeConnections.find(c => `e${c.source}-${c.target}` === edge.id);
+        if (!conn) return edge;
+        const visible = getEdgeVisibility(conn, newCount);
+        return {
+          ...edge,
+          animated: visible,
+          label: visible ? conn.label : undefined,
+          style: visible ? visibleEdgeStyle : hiddenEdgeStyle
+        };
+      }));
     }
   }, [visibleCount, setNodes, setEdges]);
 
+  // ⚡ Bolt Optimization: Reuse memoized initial state variables to avoid
+  // redundant object creation and layout calculations during resets.
   const handleReset = useCallback(() => {
     setVisibleCount(1);
-    nodePositions.current = { ...positions };
-    setNodes(getNodes(1, nodePositions.current));
-    setEdges(edgeConnections.map((conn, index) => createEdge(conn, index < 0)));
-  }, [setNodes, setEdges]);
+    setNodes(initialNodes);
+    setEdges(initialEdges);
+  }, [setNodes, setEdges, initialNodes, initialEdges]);
 
   return (
     <div className="notepad-window">
@@ -358,12 +456,12 @@ function App() {
           onConnect={onConnect}
           onReconnect={onReconnect}
           fitView
-          fitViewOptions={{ padding: 0.2 }}
+          fitViewOptions={FIT_VIEW_OPTIONS}
           nodesDraggable={true}
           nodesConnectable={true}
           edgesReconnectable={true}
           elementsSelectable={true}
-          deleteKeyCode={['Backspace', 'Delete']}
+          deleteKeyCode={DELETE_KEY_CODE}
           panOnDrag={true}
           panOnScroll={true}
           zoomOnScroll={true}
