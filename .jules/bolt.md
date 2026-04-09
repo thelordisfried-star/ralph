@@ -1,0 +1,3 @@
+## 2024-04-09 - React Flow Node Memoization
+**Learning:** In `@xyflow/react`, `React.memo` on custom node components is completely bypassed if node `data` or `style` props are created inline inside the rendering cycle or state initialization. Furthermore, accessing `useRef.current` inside `useMemo` triggers a strict ESLint `react-hooks/refs` build error because refs must only be accessed outside the render phase.
+**Action:** Extract static node configuration objects (`stepDataMap`, `visibleStepStyle`) to module-level constants to preserve referential stability. When initializing state that relies on static layout data, use those direct variable references instead of a `useRef` to avoid React build errors.
