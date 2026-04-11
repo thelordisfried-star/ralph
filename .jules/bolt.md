@@ -1,0 +1,3 @@
+## 2024-05-24 - React Flow Custom Node Optimization
+**Learning:** React Flow custom nodes require explicit wrapping in `React.memo` at their definition (e.g. `const CustomNode = memo(function CustomNode(...) { ... })`). Without this, internal React Flow graph state updates (like panning or zooming) will trigger global re-renders of every node component, creating significant performance overhead on large graphs.
+**Action:** When creating new node types or optimizing existing ones in React Flow applications, always wrap the custom node component in `React.memo` unless it specifically depends on rapidly changing context.
