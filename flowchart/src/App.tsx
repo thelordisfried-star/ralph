@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef, useMemo } from 'react';
+import { useCallback, useState, useMemo } from 'react';
 import type { Node, Edge, NodeChange, EdgeChange, Connection } from '@xyflow/react';
 import {
   ReactFlow,
@@ -245,9 +245,7 @@ const getEdgeVisibility = (conn: typeof edgeConnections[0], visibleStepCount: nu
 
 function App() {
   const [visibleCount, setVisibleCount] = useState(1);
-  const nodePositions = useRef<{ [key: string]: { x: number; y: number } }>({ ...positions });
-
-  const initialNodes = useMemo(() => getNodes(1, nodePositions.current), []);
+  const initialNodes = useMemo(() => getNodes(1, positions), []);
   const initialEdges = useMemo(() => edgeConnections.map((conn, index) =>
     createEdge(conn, index < 0)
   ), []);
@@ -257,11 +255,6 @@ function App() {
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      changes.forEach((change) => {
-        if (change.type === 'position' && change.position) {
-          nodePositions.current[change.id] = change.position;
-        }
-      });
       setNodes((nds) => applyNodeChanges(changes, nds));
     },
     [setNodes]
@@ -288,40 +281,67 @@ function App() {
     [setEdges]
   );
 
+// ⚡ Bolt Optimization: Use functional setters to selectively modify node visibility instead of recreating arrays, preserving positions naturally and reducing re-renders.
+  const updateVisibility = useCallback((newCount: number) => {
+    setVisibleCount(newCount);
+    setNodes((nds) =>
+      nds.map((node) => {
+        let visible = false;
+        if (node.type === 'custom') {
+          const index = stepIndexMap.get(node.id) ?? -1;
+          visible = index < newCount;
+        } else if (node.type === 'note') {
+          const noteObj = notes.find(n => n.id === node.id);
+          visible = noteObj ? newCount >= noteObj.appearsWithStep : false;
+        }
+
+        return {
+          ...node,
+          style: {
+            ...node.style,
+            opacity: visible ? 1 : 0,
+            pointerEvents: visible ? 'auto' : 'none',
+          },
+        };
+      })
+    );
+
+    setEdges((eds) =>
+      eds.map((edge) => {
+        // Need to recreate connection shape for getEdgeVisibility
+        const conn = { source: edge.source, target: edge.target };
+        const visible = getEdgeVisibility(conn, newCount);
+
+        return {
+          ...edge,
+          animated: visible,
+          label: visible ? edgeConnections.find(ec => ec.source === edge.source && ec.target === edge.target)?.label : undefined,
+          style: {
+            ...edge.style,
+            opacity: visible ? 1 : 0,
+          },
+        };
+      })
+    );
+  }, [setNodes, setEdges]);
+
   const handleNext = useCallback(() => {
     if (visibleCount < allSteps.length) {
-      const newCount = visibleCount + 1;
-      setVisibleCount(newCount);
-
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      updateVisibility(visibleCount + 1);
     }
-  }, [visibleCount, setNodes, setEdges]);
+  }, [visibleCount, updateVisibility]);
 
   const handlePrev = useCallback(() => {
     if (visibleCount > 1) {
-      const newCount = visibleCount - 1;
-      setVisibleCount(newCount);
-
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      updateVisibility(visibleCount - 1);
     }
-  }, [visibleCount, setNodes, setEdges]);
+  }, [visibleCount, updateVisibility]);
 
   const handleReset = useCallback(() => {
     setVisibleCount(1);
-    nodePositions.current = { ...positions };
-    setNodes(getNodes(1, nodePositions.current));
-    setEdges(edgeConnections.map((conn, index) => createEdge(conn, index < 0)));
-  }, [setNodes, setEdges]);
+    setNodes(initialNodes);
+    setEdges(initialEdges);
+  }, [setNodes, setEdges, initialNodes, initialEdges]);
 
   return (
     <div className="notepad-window">
