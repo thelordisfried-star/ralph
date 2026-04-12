@@ -1,0 +1,3 @@
+## 2024-04-12 - Functional state setters vs React Flow state Arrays
+**Learning:** In React Flow, entirely recreating node/edge arrays from scratch (even with the exact same data) on simple state changes completely breaks the library's internal memoization and causes excessive re-renders. Manually syncing dragged node positions to a custom `useRef` is an anti-pattern.
+**Action:** Always use functional setters (e.g., `setNodes(nds => nds.map(...))`) to selectively mutate node/edge properties (like visibility styles) in-place. This natively preserves coordinate changes made via drag-and-drop without any manual syncing and dramatically reduces unnecessary React rerenders.
