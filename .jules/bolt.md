@@ -1,0 +1,3 @@
+## 2025-02-23 - Custom Node Rerenders in React Flow architectures
+**Learning:** Custom nodes (like `CustomNode` and `NoteNode` in React Flow architectures) will re-render continuously during internal React Flow graph state updates (like panning and zooming) unless explicitly memoized, causing substantial performance overhead when graph sizes grow. The memoization logic is critical for referential stability.
+**Action:** Always explicitly wrap custom node components in `React.memo` at definition when using `@xyflow/react` to preserve rendering performance during global viewport and internal component changes.
