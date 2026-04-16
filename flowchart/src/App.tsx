@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef, useMemo, memo } from 'react';
+import { useCallback, useState, useRef, useMemo, memo, type CSSProperties } from 'react';
 import type { Node, Edge, NodeChange, EdgeChange, Connection } from '@xyflow/react';
 import {
   ReactFlow,
@@ -141,6 +141,63 @@ const positions: { [key: string]: { x: number; y: number } } = {
   ...Object.fromEntries(notes.map(n => [n.id, n.position])),
 };
 
+// ⚡ Bolt Optimization: Extracted inline styles and data objects to maintain referential stability.
+// This prevents React Flow from unnecessarily re-rendering all nodes and edges on every state change.
+const visibleStepStyle: CSSProperties = {
+  width: nodeWidth,
+  height: nodeHeight,
+  opacity: 1,
+  transition: 'opacity 0.5s ease-in-out',
+  pointerEvents: 'auto',
+};
+const hiddenStepStyle: CSSProperties = {
+  width: nodeWidth,
+  height: nodeHeight,
+  opacity: 0,
+  transition: 'opacity 0.5s ease-in-out',
+  pointerEvents: 'none',
+};
+
+const visibleNoteStyle: CSSProperties = {
+  opacity: 1,
+  transition: 'opacity 0.5s ease-in-out',
+  pointerEvents: 'auto',
+};
+const hiddenNoteStyle: CSSProperties = {
+  opacity: 0,
+  transition: 'opacity 0.5s ease-in-out',
+  pointerEvents: 'none',
+};
+
+const visibleEdgeStyle: CSSProperties = {
+  stroke: '#222',
+  strokeWidth: 2,
+  opacity: 1,
+  transition: 'opacity 0.5s ease-in-out',
+};
+const hiddenEdgeStyle: CSSProperties = {
+  stroke: '#222',
+  strokeWidth: 2,
+  opacity: 0,
+  transition: 'opacity 0.5s ease-in-out',
+};
+
+const edgeLabelStyle: CSSProperties = {
+  fill: '#222',
+  fontWeight: 600,
+  fontSize: 14,
+};
+const edgeLabelBgPadding: [number, number] = [8, 4];
+const edgeLabelBgStyle: CSSProperties = {
+  fill: '#fff',
+  stroke: '#222',
+  strokeWidth: 1,
+};
+const edgeMarkerEnd = { type: MarkerType.ArrowClosed, color: '#222' };
+
+const stepDataMap = new Map(allSteps.map(step => [step.id, { title: step.label, description: step.description, phase: step.phase }]));
+const noteDataMap = new Map(notes.map(note => [note.id, { content: note.content, color: note.color }]));
+
 const edgeConnections: { source: string; target: string; sourceHandle?: string; targetHandle?: string; label?: string }[] = [
   // Setup phase (vertical) - bottom to top connections
   { source: '1', target: '2', sourceHandle: 'bottom', targetHandle: 'top' },
@@ -162,18 +219,8 @@ function createNode(step: typeof allSteps[0], visible: boolean, position?: { x: 
     id: step.id,
     type: 'custom',
     position: position || positions[step.id],
-    data: {
-      title: step.label,
-      description: step.description,
-      phase: step.phase,
-    },
-    style: {
-      width: nodeWidth,
-      height: nodeHeight,
-      opacity: visible ? 1 : 0,
-      transition: 'opacity 0.5s ease-in-out',
-      pointerEvents: visible ? 'auto' : 'none',
-    },
+    data: stepDataMap.get(step.id)!,
+    style: visible ? visibleStepStyle : hiddenStepStyle,
   };
 }
 
@@ -186,28 +233,12 @@ function createEdge(conn: typeof edgeConnections[0], visible: boolean): Edge {
     targetHandle: conn.targetHandle,
     label: visible ? conn.label : undefined,
     animated: visible,
-    style: {
-      stroke: '#222',
-      strokeWidth: 2,
-      opacity: visible ? 1 : 0,
-      transition: 'opacity 0.5s ease-in-out',
-    },
-    labelStyle: {
-      fill: '#222',
-      fontWeight: 600,
-      fontSize: 14,
-    },
+    style: visible ? visibleEdgeStyle : hiddenEdgeStyle,
+    labelStyle: edgeLabelStyle,
     labelShowBg: true,
-    labelBgPadding: [8, 4] as [number, number],
-    labelBgStyle: {
-      fill: '#fff',
-      stroke: '#222',
-      strokeWidth: 1,
-    },
-    markerEnd: {
-      type: MarkerType.ArrowClosed,
-      color: '#222',
-    },
+    labelBgPadding: edgeLabelBgPadding,
+    labelBgStyle: edgeLabelBgStyle,
+    markerEnd: edgeMarkerEnd,
   };
 }
 
@@ -216,12 +247,8 @@ function createNoteNode(note: typeof notes[0], visible: boolean, position?: { x:
     id: note.id,
     type: 'note',
     position: position || positions[note.id],
-    data: { content: note.content, color: note.color },
-    style: {
-      opacity: visible ? 1 : 0,
-      transition: 'opacity 0.5s ease-in-out',
-      pointerEvents: visible ? 'auto' : 'none',
-    },
+    data: noteDataMap.get(note.id)!,
+    style: visible ? visibleNoteStyle : hiddenNoteStyle,
     draggable: true,
     selectable: false,
     connectable: false,
