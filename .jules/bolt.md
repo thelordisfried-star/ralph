@@ -1,0 +1,3 @@
+## 2024-05-24 - React Flow Type Inference Fix
+**Learning:** When using functional state updates to modify inline React styles in TypeScript (`nds.map(n => ({...n, style: {...n.style, pointerEvents: ...}}))`), TS may infer ternary string results (e.g., `isVisible ? 'auto' : 'none'`) as a generic `string` rather than the required string literal union type from `CSSProperties` (e.g., `PointerEvents`), leading to TS2345 errors during build.
+**Action:** Always explicitly typecast style string literals when extracting them to intermediate variables for conditional style updates (e.g., `const expectedPointerEvents: 'auto' | 'none' = isVisible ? 'auto' : 'none';`).
