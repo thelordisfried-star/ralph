@@ -1,0 +1,4 @@
+
+## 2025-04-25 - React Flow State Update Optimization
+**Learning:** In React Flow, entirely recreating the `nodes` and `edges` arrays on every state change forces the library to diff and reconcile the entire graph, leading to severe performance bottlenecks. Also, attempting to hide edge labels using `labelStyle: { opacity: 0 }` is insufficient because React Flow renders a solid background for labels (`labelBgStyle` and `labelShowBg`) which remains visible; hiding edge labels safely requires setting the `label` string itself to `undefined`.
+**Action:** When updating React Flow graph state, always use functional state setters (`setNodes(nds => ...)`) to map over existing objects and only mutate properties (like `style`) for nodes/edges that actually changed, preserving referential stability. When dynamically toggling edge label visibility, toggle the `label` property to `undefined` rather than manipulating label opacity.
