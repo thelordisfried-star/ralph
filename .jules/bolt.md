@@ -1,0 +1,3 @@
+## 2024-06-25 - Prevent O(N) recreations in React Flow
+**Learning:** In the flowchart application, repeatedly calling `setNodes` and `setEdges` with freshly constructed object arrays on every state transition (Next/Prev buttons) causes massive re-renders and degrades animation performance, as it breaks referential equality for all items and forces React Flow to internally drop and recreate state.
+**Action:** Use functional updaters (`setNodes(nds => nds.map(...))`) alongside O(1) lookups (like `Map` caches) to explicitly selectively update only the properties (e.g. `style.opacity`, `pointerEvents`) that change, retaining referential equality (returning the original node/edge object) for all unchanged nodes/edges.
