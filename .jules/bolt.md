@@ -1,0 +1,3 @@
+## 2024-04-27 - React Flow Performance Patterns
+**Learning:** In React Flow, entirely replacing the `nodes` and `edges` arrays using new object references causes massive internal reconciliation and unmounts/remounts. Using functional state setters to map over the existing arrays and immutably update *only* the specific style properties of nodes/edges whose visibility changes preserves referential stability and natural position tracking.
+**Action:** Extract static configuration options (`fitViewOptions`, `deleteKeyCode`) outside the component scope to avoid unnecessary prop invalidations, and always prefer updating existing node/edge states over total recreation to optimize render frame times.
