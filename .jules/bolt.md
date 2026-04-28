@@ -1,0 +1,3 @@
+## 2024-05-18 - React Flow State Thrashing via Full Array Re-renders
+**Learning:** In React Flow, entirely reconstructing the nodes and edges array on every state update (e.g. mapping over `allSteps` inside a `handleNext` function) destroys referential equality. This completely bypasses React Flow's internal node optimizations and React.memo logic, causing the entire graph to re-render, which is heavily taxing on performance for larger flows.
+**Action:** Always maintain the referential integrity of React Flow arrays. Use functional state updaters (`setNodes(nds => ...)`) to selectively mutate only the style properties of the nodes that are changing state (e.g., visibility), ensuring unmodified nodes retain exact reference equality and skip re-rendering.
