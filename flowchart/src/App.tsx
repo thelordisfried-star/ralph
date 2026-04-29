@@ -228,6 +228,65 @@ function createNoteNode(note: typeof notes[0], visible: boolean, position?: { x:
   };
 }
 
+
+// ⚡ Bolt Optimization: Replace O(N) recreations in handleNext/handlePrev with O(1) state updates
+// by utilizing functional state setters (`setNodes(nds => ...)`) and modifying only visibility properties,
+// preventing full object reallocation and preserving React.memo boundaries.
+
+const noteAppearsMap = new Map(notes.map(n => [n.id, n.appearsWithStep]));
+const edgeLabelMap = new Map(edgeConnections.map(c => [`e${c.source}-${c.target}`, c.label]));
+
+const updateNodesVisibility = (count: number) => (nds: Node[]) =>
+  nds.map((node) => {
+    let visible = false;
+    if (node.type === 'note') {
+      const appearsWith = noteAppearsMap.get(node.id) ?? Infinity;
+      visible = count >= appearsWith;
+    } else {
+      const index = stepIndexMap.get(node.id) ?? -1;
+      visible = index !== -1 && index < count;
+    }
+
+    const targetOpacity = visible ? 1 : 0;
+    const targetPointerEvents: 'auto' | 'none' = visible ? 'auto' : 'none';
+
+    if (node.style?.opacity === targetOpacity) {
+      return node;
+    }
+
+    return {
+      ...node,
+      style: {
+        ...node.style,
+        opacity: targetOpacity,
+        pointerEvents: targetPointerEvents,
+      },
+    };
+  });
+
+const updateEdgesVisibility = (count: number) => (eds: Edge[]) =>
+  eds.map((edge) => {
+    const sourceIndex = stepIndexMap.get(edge.source) ?? -1;
+    const targetIndex = stepIndexMap.get(edge.target) ?? -1;
+    const visible = sourceIndex !== -1 && targetIndex !== -1 && sourceIndex < count && targetIndex < count;
+
+    const targetOpacity = visible ? 1 : 0;
+
+    if (edge.style?.opacity === targetOpacity) {
+      return edge;
+    }
+
+    return {
+      ...edge,
+      label: visible ? edgeLabelMap.get(edge.id) : undefined,
+      animated: visible,
+      style: {
+        ...edge.style,
+        opacity: targetOpacity,
+      },
+    };
+  });
+
 const getNodes = (count: number, currentPositions: { [key: string]: { x: number; y: number } }) => {
   const stepNodes = allSteps.map((step, index) =>
     createNode(step, index < count, currentPositions[step.id])
@@ -237,12 +296,6 @@ const getNodes = (count: number, currentPositions: { [key: string]: { x: number;
     return createNoteNode(note, noteVisible, currentPositions[note.id]);
   });
   return [...stepNodes, ...noteNodes];
-};
-
-const getEdgeVisibility = (conn: typeof edgeConnections[0], visibleStepCount: number) => {
-  const sourceIndex = stepIndexMap.get(conn.source) ?? -1;
-  const targetIndex = stepIndexMap.get(conn.target) ?? -1;
-  return sourceIndex < visibleStepCount && targetIndex < visibleStepCount;
 };
 
 function App() {
@@ -296,12 +349,8 @@ function App() {
       const newCount = visibleCount + 1;
       setVisibleCount(newCount);
 
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      setNodes(updateNodesVisibility(newCount));
+      setEdges(updateEdgesVisibility(newCount));
     }
   }, [visibleCount, setNodes, setEdges]);
 
@@ -310,12 +359,8 @@ function App() {
       const newCount = visibleCount - 1;
       setVisibleCount(newCount);
 
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      setNodes(updateNodesVisibility(newCount));
+      setEdges(updateEdgesVisibility(newCount));
     }
   }, [visibleCount, setNodes, setEdges]);
 
