@@ -1,0 +1,3 @@
+## 2024-05-18 - React Flow State Immutability
+**Learning:** In large React Flow applications, naively replacing the nodes/edges arrays on every state change using `setNodes(getNodes())` breaks referential stability. This forces React Flow to do a deep comparison and re-render every node and edge in the graph even if they haven't changed visually, causing significant lag.
+**Action:** When updating visibility or other properties, utilize functional state setters (`setNodes(nds => nds.map(...))`) and selectively mutate only the objects that need changing, returning the exact same object reference (`return node;`) for unaffected items to prevent O(N) object allocations and preserve referential equality.

@@ -157,6 +157,9 @@ const edgeConnections: { source: string; target: string; sourceHandle?: string; 
   { source: '9', target: '10', sourceHandle: 'bottom', targetHandle: 'top', label: 'No' },
 ];
 
+const noteAppearsMap = new Map(notes.map(n => [n.id, n.appearsWithStep]));
+const edgeLabelMap = new Map(edgeConnections.map(c => [`e${c.source}-${c.target}`, c.label]));
+
 function createNode(step: typeof allSteps[0], visible: boolean, position?: { x: number; y: number }): Node {
   return {
     id: step.id,
@@ -239,10 +242,59 @@ const getNodes = (count: number, currentPositions: { [key: string]: { x: number;
   return [...stepNodes, ...noteNodes];
 };
 
-const getEdgeVisibility = (conn: typeof edgeConnections[0], visibleStepCount: number) => {
-  const sourceIndex = stepIndexMap.get(conn.source) ?? -1;
-  const targetIndex = stepIndexMap.get(conn.target) ?? -1;
-  return sourceIndex < visibleStepCount && targetIndex < visibleStepCount;
+// ⚡ Bolt Optimization: Use functional state setters and targeted modifications to preserve referential stability and prevent O(N) object allocations
+const updateNodesVisibility = (newCount: number) => (nds: Node[]) => {
+  return nds.map((node) => {
+    let isVisible = false;
+
+    if (node.type === 'note') {
+      const appearsWithStep = noteAppearsMap.get(node.id) ?? 999;
+      isVisible = newCount >= appearsWithStep;
+    } else {
+      const index = stepIndexMap.get(node.id) ?? -1;
+      isVisible = index !== -1 && index < newCount;
+    }
+
+    const expectedOpacity = isVisible ? 1 : 0;
+    const expectedPointerEvents: 'auto' | 'none' = isVisible ? 'auto' : 'none';
+
+    if (node.style?.opacity === expectedOpacity && node.style?.pointerEvents === expectedPointerEvents) {
+      return node;
+    }
+
+    return {
+      ...node,
+      style: {
+        ...node.style,
+        opacity: expectedOpacity,
+        pointerEvents: expectedPointerEvents,
+      },
+    };
+  });
+};
+
+const updateEdgesVisibility = (newCount: number) => (eds: Edge[]) => {
+  return eds.map((edge) => {
+    const sourceIndex = stepIndexMap.get(edge.source) ?? -1;
+    const targetIndex = stepIndexMap.get(edge.target) ?? -1;
+    const isVisible = sourceIndex !== -1 && targetIndex !== -1 && sourceIndex < newCount && targetIndex < newCount;
+
+    const expectedOpacity = isVisible ? 1 : 0;
+
+    if (edge.style?.opacity === expectedOpacity) {
+      return edge;
+    }
+
+    return {
+      ...edge,
+      animated: isVisible,
+      label: isVisible ? edgeLabelMap.get(edge.id) : undefined,
+      style: {
+        ...edge.style,
+        opacity: expectedOpacity,
+      },
+    };
+  });
 };
 
 function App() {
@@ -296,12 +348,9 @@ function App() {
       const newCount = visibleCount + 1;
       setVisibleCount(newCount);
 
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      // ⚡ Bolt Optimization: Use functional setters to avoid O(N) object allocations and preserve referential stability of un-updated nodes
+      setNodes(updateNodesVisibility(newCount));
+      setEdges(updateEdgesVisibility(newCount));
     }
   }, [visibleCount, setNodes, setEdges]);
 
@@ -310,12 +359,9 @@ function App() {
       const newCount = visibleCount - 1;
       setVisibleCount(newCount);
 
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      // ⚡ Bolt Optimization: Use functional setters to avoid O(N) object allocations and preserve referential stability of un-updated nodes
+      setNodes(updateNodesVisibility(newCount));
+      setEdges(updateEdgesVisibility(newCount));
     }
   }, [visibleCount, setNodes, setEdges]);
 
