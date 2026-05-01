@@ -1,0 +1,3 @@
+## 2025-02-28 - React Flow State Mutation
+**Learning:** When dynamically mutating React Flow state via functional setters to avoid full re-renders, it's crucial to spread the existing object (`...edge`) and preserve static config. Failing to do so for properties like `labelStyle` or `markerEnd` that aren't strictly toggled by visibility will cause them to be lost when elements are toggled on.
+**Action:** Always verify that functional setters in React Flow maintain the complete initial configuration surface area, particularly visual label/marker properties, or else dynamically revealed elements will render broken.
