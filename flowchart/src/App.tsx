@@ -239,11 +239,69 @@ const getNodes = (count: number, currentPositions: { [key: string]: { x: number;
   return [...stepNodes, ...noteNodes];
 };
 
-const getEdgeVisibility = (conn: typeof edgeConnections[0], visibleStepCount: number) => {
-  const sourceIndex = stepIndexMap.get(conn.source) ?? -1;
-  const targetIndex = stepIndexMap.get(conn.target) ?? -1;
-  return sourceIndex < visibleStepCount && targetIndex < visibleStepCount;
-};
+
+
+// ⚡ Bolt Optimization: Extracted fitViewOptions and deleteKeyCode to module-level constants
+// to prevent referential instability and unnecessary re-renders in <ReactFlow>.
+const FIT_VIEW_OPTIONS = { padding: 0.2 };
+const DELETE_KEY_CODE = ['Backspace', 'Delete'];
+
+// ⚡ Bolt Optimization: module-level Maps for O(1) lookups during visibility updates
+const noteAppearsMap = new Map(notes.map(n => [n.id, n.appearsWithStep]));
+const edgeLabelMap = new Map(edgeConnections.map(c => [`e${c.source}-${c.target}`, c.label]));
+
+// ⚡ Bolt Optimization: Helper function for ReactFlow edges visibility via functional setters
+function updateEdgesVisibility(visibleStepCount: number) {
+  return function(edges: Edge[]) {
+    return edges.map(edge => {
+      const sourceId = edge.source;
+      const targetId = edge.target;
+      const sourceIndex = stepIndexMap.get(sourceId) ?? -1;
+      const targetIndex = stepIndexMap.get(targetId) ?? -1;
+      const visible = sourceIndex < visibleStepCount && targetIndex < visibleStepCount;
+      const targetOpacity = visible ? 1 : 0;
+
+      if (edge.style?.opacity === targetOpacity) return edge;
+
+      const label = visible ? edgeLabelMap.get(edge.id) : undefined;
+
+      return {
+        ...edge,
+        label,
+        animated: visible,
+        style: { ...edge.style, opacity: targetOpacity }
+      };
+    });
+  };
+}
+
+// ⚡ Bolt Optimization: Helper function for ReactFlow nodes visibility via functional setters
+function updateNodesVisibility(visibleStepCount: number) {
+  return function(nodes: Node[]) {
+    return nodes.map(node => {
+      let visible = false;
+      if (node.type === 'note') {
+        const appearsWith = noteAppearsMap.get(node.id) ?? Infinity;
+        visible = visibleStepCount >= appearsWith;
+      } else {
+        const stepIndex = stepIndexMap.get(node.id) ?? Infinity;
+        visible = stepIndex < visibleStepCount;
+      }
+
+      const targetOpacity = visible ? 1 : 0;
+      const targetPointerEvents: 'auto' | 'none' = visible ? 'auto' : 'none';
+
+      if (node.style?.opacity === targetOpacity && node.style?.pointerEvents === targetPointerEvents) {
+        return node;
+      }
+
+      return {
+        ...node,
+        style: { ...node.style, opacity: targetOpacity, pointerEvents: targetPointerEvents }
+      };
+    });
+  };
+}
 
 function App() {
   const [visibleCount, setVisibleCount] = useState(1);
@@ -295,13 +353,9 @@ function App() {
     if (visibleCount < allSteps.length) {
       const newCount = visibleCount + 1;
       setVisibleCount(newCount);
-
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      // ⚡ Bolt Optimization: Mutate existing elements via functional setters to preserve references
+      setNodes(updateNodesVisibility(newCount));
+      setEdges(updateEdgesVisibility(newCount));
     }
   }, [visibleCount, setNodes, setEdges]);
 
@@ -309,13 +363,9 @@ function App() {
     if (visibleCount > 1) {
       const newCount = visibleCount - 1;
       setVisibleCount(newCount);
-
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      // ⚡ Bolt Optimization: Mutate existing elements via functional setters to preserve references
+      setNodes(updateNodesVisibility(newCount));
+      setEdges(updateEdgesVisibility(newCount));
     }
   }, [visibleCount, setNodes, setEdges]);
 
@@ -362,12 +412,12 @@ function App() {
           onConnect={onConnect}
           onReconnect={onReconnect}
           fitView
-          fitViewOptions={{ padding: 0.2 }}
+          fitViewOptions={FIT_VIEW_OPTIONS}
           nodesDraggable={true}
           nodesConnectable={true}
           edgesReconnectable={true}
           elementsSelectable={true}
-          deleteKeyCode={['Backspace', 'Delete']}
+          deleteKeyCode={DELETE_KEY_CODE}
           panOnDrag={true}
           panOnScroll={true}
           zoomOnScroll={true}
