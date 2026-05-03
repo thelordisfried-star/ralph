@@ -123,6 +123,7 @@ const nodeTypes = { custom: CustomNode, note: NoteNode };
 
 const stepIndexMap = new Map(allSteps.map((s, i) => [s.id, i]));
 
+
 const positions: { [key: string]: { x: number; y: number } } = {
   // Vertical setup flow on the left
   '1': { x: 20, y: 20 },
@@ -156,6 +157,10 @@ const edgeConnections: { source: string; target: string; sourceHandle?: string; 
   // Exit
   { source: '9', target: '10', sourceHandle: 'bottom', targetHandle: 'top', label: 'No' },
 ];
+
+const noteAppearsMap = new Map(notes.map(n => [n.id, n.appearsWithStep]));
+const edgeLabelMap = new Map(edgeConnections.filter(e => e.label).map(e => [`e${e.source}-${e.target}`, e.label]));
+
 
 function createNode(step: typeof allSteps[0], visible: boolean, position?: { x: number; y: number }): Node {
   return {
@@ -239,11 +244,61 @@ const getNodes = (count: number, currentPositions: { [key: string]: { x: number;
   return [...stepNodes, ...noteNodes];
 };
 
-const getEdgeVisibility = (conn: typeof edgeConnections[0], visibleStepCount: number) => {
-  const sourceIndex = stepIndexMap.get(conn.source) ?? -1;
-  const targetIndex = stepIndexMap.get(conn.target) ?? -1;
-  return sourceIndex < visibleStepCount && targetIndex < visibleStepCount;
-};
+
+
+const updateNodesVisibility = (visibleCount: number) => (nds: Node[]) =>
+  nds.map((node) => {
+    let isVisible = false;
+    if (node.type === 'note') {
+      const appearsWith = noteAppearsMap.get(node.id) ?? 999;
+      isVisible = visibleCount >= appearsWith;
+    } else {
+      const stepIndex = stepIndexMap.get(node.id) ?? 999;
+      isVisible = stepIndex < visibleCount;
+    }
+
+    const expectedOpacity = isVisible ? 1 : 0;
+    const expectedPointerEvents: 'auto' | 'none' = isVisible ? 'auto' : 'none';
+
+    if (
+      node.style?.opacity === expectedOpacity &&
+      node.style?.pointerEvents === expectedPointerEvents
+    ) {
+      return node;
+    }
+
+    return {
+      ...node,
+      style: {
+        ...node.style,
+        opacity: expectedOpacity,
+        pointerEvents: expectedPointerEvents,
+      },
+    };
+  });
+
+const updateEdgesVisibility = (visibleCount: number) => (eds: Edge[]) =>
+  eds.map((edge) => {
+    const sourceIndex = stepIndexMap.get(edge.source) ?? -1;
+    const targetIndex = stepIndexMap.get(edge.target) ?? -1;
+
+    const isVisible = sourceIndex < visibleCount && targetIndex < visibleCount;
+    const expectedOpacity = isVisible ? 1 : 0;
+
+    if (edge.style?.opacity === expectedOpacity) {
+      return edge;
+    }
+
+    return {
+      ...edge,
+      label: isVisible ? edgeLabelMap.get(edge.id) : undefined,
+      animated: isVisible,
+      style: {
+        ...edge.style,
+        opacity: expectedOpacity,
+      },
+    };
+  });
 
 function App() {
   const [visibleCount, setVisibleCount] = useState(1);
@@ -291,31 +346,23 @@ function App() {
     [setEdges]
   );
 
+  // ⚡ Bolt Optimization: Replace O(N) recreations with functional setters to prevent excessive GC pressure and React re-renders.
   const handleNext = useCallback(() => {
     if (visibleCount < allSteps.length) {
       const newCount = visibleCount + 1;
       setVisibleCount(newCount);
-
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      setNodes(updateNodesVisibility(newCount));
+      setEdges(updateEdgesVisibility(newCount));
     }
   }, [visibleCount, setNodes, setEdges]);
 
+  // ⚡ Bolt Optimization: Replace O(N) recreations with functional setters to prevent excessive GC pressure and React re-renders.
   const handlePrev = useCallback(() => {
     if (visibleCount > 1) {
       const newCount = visibleCount - 1;
       setVisibleCount(newCount);
-
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      setNodes(updateNodesVisibility(newCount));
+      setEdges(updateEdgesVisibility(newCount));
     }
   }, [visibleCount, setNodes, setEdges]);
 
