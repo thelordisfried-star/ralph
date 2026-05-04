@@ -1,0 +1,3 @@
+## 2024-05-04 - React Flow Reference Identity and State Setters
+**Learning:** In React Flow, storing graph coordinates in a `useRef` and re-computing `getNodes` on every step change causes `O(N)` recreation of all nodes and edges. This breaks `React.memo` and degrades pan/zoom performance, as referential identity of unchanged nodes is lost.
+**Action:** Avoid `useRef` for tracking node positions when nodes are draggable. Instead, rely entirely on `applyNodeChanges` internal state for positions, and use functional setters (`setNodes(nds => ...)`) mapping over existing nodes/edges with object spread (`...node`) to update ONLY the properties (like `style.opacity`) that actually change, preserving referential stability.
