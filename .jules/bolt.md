@@ -1,0 +1,3 @@
+## 2024-03-05 - [Optimize ReactFlow Array Object Recreation in Handlers]
+**Learning:** Found that dynamically recreating arrays of `Node` and `Edge` objects in `ReactFlow` event handlers like `handleNext`/`handlePrev` triggered expensive re-renders and React node garbage collection.
+**Action:** Replace map-based object recreations with selective updates using functional setters `setNodes(nds => nds.map(...))`, spreading the previous object instances to preserve reference equality and static configuration, and only mutating the CSS properties (e.g. `opacity`) when actually changing visibility state.
