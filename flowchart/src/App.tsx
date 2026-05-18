@@ -1,4 +1,5 @@
 import { useCallback, useState, useRef, useMemo, memo } from 'react';
+import type { CSSProperties } from 'react';
 import type { Node, Edge, NodeChange, EdgeChange, Connection } from '@xyflow/react';
 import {
   ReactFlow,
@@ -245,6 +246,62 @@ const getEdgeVisibility = (conn: typeof edgeConnections[0], visibleStepCount: nu
   return sourceIndex < visibleStepCount && targetIndex < visibleStepCount;
 };
 
+// ⚡ Bolt Optimization: Use functional state updates for nodes and edges visibility.
+// This prevents O(N) object creation on every 'Next/Prev' step and preserves memoization stability.
+const updateNodesVisibility = (nodes: Node[], visibleStepCount: number): Node[] => {
+  return nodes.map(node => {
+    let isVisible = false;
+    if (node.type === 'note') {
+      const noteConfig = notes.find(n => n.id === node.id);
+      isVisible = noteConfig ? visibleStepCount >= noteConfig.appearsWithStep : false;
+    } else {
+      const stepIndex = stepIndexMap.get(node.id) ?? -1;
+      isVisible = stepIndex !== -1 && stepIndex < visibleStepCount;
+    }
+
+    const expectedOpacity = isVisible ? 1 : 0;
+    const expectedPointerEvents: 'auto' | 'none' = isVisible ? 'auto' : 'none';
+
+    if (node.style?.opacity === expectedOpacity && node.style?.pointerEvents === expectedPointerEvents) {
+      return node;
+    }
+
+    return {
+      ...node,
+      style: {
+        ...node.style,
+        opacity: expectedOpacity,
+        pointerEvents: expectedPointerEvents,
+      } as CSSProperties
+    };
+  });
+};
+
+const updateEdgesVisibility = (edges: Edge[], visibleStepCount: number): Edge[] => {
+  return edges.map(edge => {
+    // Find the original connection definition
+    const originalConn = edgeConnections.find(conn => `e${conn.source}-${conn.target}` === edge.id);
+    if (!originalConn) return edge; // Should not happen, but return unchanged if it does
+
+    const isVisible = getEdgeVisibility(originalConn, visibleStepCount);
+    const expectedOpacity = isVisible ? 1 : 0;
+
+    if (edge.style?.opacity === expectedOpacity && edge.animated === isVisible) {
+      return edge;
+    }
+
+    return {
+      ...edge,
+      animated: isVisible,
+      label: isVisible ? originalConn.label : undefined,
+      style: {
+        ...edge.style,
+        opacity: expectedOpacity,
+      } as CSSProperties
+    };
+  });
+};
+
 function App() {
   const [visibleCount, setVisibleCount] = useState(1);
   const nodePositions = useRef<{ [key: string]: { x: number; y: number } }>({ ...positions });
@@ -296,12 +353,8 @@ function App() {
       const newCount = visibleCount + 1;
       setVisibleCount(newCount);
 
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      setNodes((nds) => updateNodesVisibility(nds, newCount));
+      setEdges((eds) => updateEdgesVisibility(eds, newCount));
     }
   }, [visibleCount, setNodes, setEdges]);
 
@@ -310,12 +363,8 @@ function App() {
       const newCount = visibleCount - 1;
       setVisibleCount(newCount);
 
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      setNodes((nds) => updateNodesVisibility(nds, newCount));
+      setEdges((eds) => updateEdgesVisibility(eds, newCount));
     }
   }, [visibleCount, setNodes, setEdges]);
 
