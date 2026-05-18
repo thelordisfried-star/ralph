@@ -1,0 +1,3 @@
+## 2024-05-18 - [Optimizing React Flow Arrays via Functional Setters]
+**Learning:** In React Flow, entirely recreating the `nodes` and `edges` arrays on every state change (e.g., in a "Next" step handler) forces React Flow to process O(N) objects and completely destroys referential stability, even if individual nodes/edges use `React.memo()`.
+**Action:** Always use functional setters (e.g., `setNodes(nds => updateNodesVisibility(nds, newCount))`) combined with array `map()` that explicitly checks for structural equality before spreading properties. Return the exact original node reference (`return node;`) if visibility hasn't changed.
