@@ -123,6 +123,10 @@ const nodeTypes = { custom: CustomNode, note: NoteNode };
 
 const stepIndexMap = new Map(allSteps.map((s, i) => [s.id, i]));
 
+// ⚡ Bolt Optimization: Use static data maps to provide referential stability for memoized React Flow components, avoiding re-renders when visibility updates.
+const STEP_DATA_BY_ID = new Map(allSteps.map(step => [step.id, { title: step.label, description: step.description, phase: step.phase }]));
+const NOTE_DATA_BY_ID = new Map(notes.map(note => [note.id, { content: note.content, color: note.color }]));
+
 const positions: { [key: string]: { x: number; y: number } } = {
   // Vertical setup flow on the left
   '1': { x: 20, y: 20 },
@@ -157,23 +161,19 @@ const edgeConnections: { source: string; target: string; sourceHandle?: string; 
   { source: '9', target: '10', sourceHandle: 'bottom', targetHandle: 'top', label: 'No' },
 ];
 
+import type { CSSProperties } from 'react';
+
+const VISIBLE_STEP_STYLE: CSSProperties = { width: nodeWidth, height: nodeHeight, opacity: 1, transition: 'opacity 0.5s ease-in-out', pointerEvents: 'auto' };
+const HIDDEN_STEP_STYLE: CSSProperties = { width: nodeWidth, height: nodeHeight, opacity: 0, transition: 'opacity 0.5s ease-in-out', pointerEvents: 'none' };
+
+// ⚡ Bolt Optimization: Replace inline style objects with static constants to avoid O(N) object allocations and maintain referential stability for memoized React Flow components.
 function createNode(step: typeof allSteps[0], visible: boolean, position?: { x: number; y: number }): Node {
   return {
     id: step.id,
     type: 'custom',
     position: position || positions[step.id],
-    data: {
-      title: step.label,
-      description: step.description,
-      phase: step.phase,
-    },
-    style: {
-      width: nodeWidth,
-      height: nodeHeight,
-      opacity: visible ? 1 : 0,
-      transition: 'opacity 0.5s ease-in-out',
-      pointerEvents: visible ? 'auto' : 'none',
-    },
+    data: STEP_DATA_BY_ID.get(step.id)!,
+    style: visible ? VISIBLE_STEP_STYLE : HIDDEN_STEP_STYLE,
   };
 }
 
@@ -211,17 +211,16 @@ function createEdge(conn: typeof edgeConnections[0], visible: boolean): Edge {
   };
 }
 
+const VISIBLE_NOTE_STYLE: CSSProperties = { opacity: 1, transition: 'opacity 0.5s ease-in-out', pointerEvents: 'auto' };
+const HIDDEN_NOTE_STYLE: CSSProperties = { opacity: 0, transition: 'opacity 0.5s ease-in-out', pointerEvents: 'none' };
+
 function createNoteNode(note: typeof notes[0], visible: boolean, position?: { x: number; y: number }): Node {
   return {
     id: note.id,
     type: 'note',
     position: position || positions[note.id],
-    data: { content: note.content, color: note.color },
-    style: {
-      opacity: visible ? 1 : 0,
-      transition: 'opacity 0.5s ease-in-out',
-      pointerEvents: visible ? 'auto' : 'none',
-    },
+    data: NOTE_DATA_BY_ID.get(note.id)!,
+    style: visible ? VISIBLE_NOTE_STYLE : HIDDEN_NOTE_STYLE,
     draggable: true,
     selectable: false,
     connectable: false,
