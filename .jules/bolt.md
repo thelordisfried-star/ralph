@@ -1,0 +1,3 @@
+## 2024-05-19 - Safe React Flow Visibility Updates
+**Learning:** React Flow edge IDs are fragile for logic parsing (`e1-2`), and string splitting them breaks when edges are natively reconnected. Additionally, completely recreating nodes arrays on state updates drops natively tracked element positions because their referential identity changes.
+**Action:** When toggling React Flow element visibility, use functional state setters (`setNodes(nds => ...)` / `setEdges(eds => ...)`) to map over existing objects and selectively update native properties (`style.opacity`). Always rely on native `edge.source` and `edge.target` for edge relationship logic rather than extracting data from IDs.
