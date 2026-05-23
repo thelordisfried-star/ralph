@@ -1,0 +1,3 @@
+## 2025-05-23 - [Refactoring React Flow state arrays]
+**Learning:** Using functional `setNodes(nds => nds.map(...))` to surgically mutate element properties (`opacity`, `pointerEvents`) prevents massive object graph recreations (`O(N)` arrays built from scratch every step). Additionally, React Flow natively preserves node `X/Y` positions when mutating elements functionally, eliminating the need to sync coordinates back and forth with a `useRef`.
+**Action:** Always favor functional state mapping (`setNodes(nodes => nodes.map(...))`) over full array recreation (`setNodes(getNodes(...))`) when selectively updating subsets of graph objects (e.g. toggling visibility styles).
