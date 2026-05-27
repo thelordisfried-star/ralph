@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef, useMemo, memo } from 'react';
+import { useCallback, useState, useMemo, memo } from 'react';
 import type { Node, Edge, NodeChange, EdgeChange, Connection } from '@xyflow/react';
 import {
   ReactFlow,
@@ -76,6 +76,8 @@ patterns discovered, so future
 iterations learn from this one.`,
   },
 ];
+
+const noteAppearsMap = new Map(notes.map(n => [n.id, n.appearsWithStep]));
 
 // ⚡ Bolt Optimization: Wrapped CustomNode in React.memo to prevent unnecessary re-renders during pan/zoom operations.
 const CustomNode = memo(function CustomNode({ data }: { data: { title: string; description: string; phase: Phase } }) {
@@ -182,6 +184,7 @@ function createEdge(conn: typeof edgeConnections[0], visible: boolean): Edge {
     id: `e${conn.source}-${conn.target}`,
     source: conn.source,
     target: conn.target,
+    data: { originalLabel: conn.label },
     sourceHandle: conn.sourceHandle,
     targetHandle: conn.targetHandle,
     label: visible ? conn.label : undefined,
@@ -228,6 +231,11 @@ function createNoteNode(note: typeof notes[0], visible: boolean, position?: { x:
   };
 }
 
+
+
+
+
+
 const getNodes = (count: number, currentPositions: { [key: string]: { x: number; y: number } }) => {
   const stepNodes = allSteps.map((step, index) =>
     createNode(step, index < count, currentPositions[step.id])
@@ -239,16 +247,8 @@ const getNodes = (count: number, currentPositions: { [key: string]: { x: number;
   return [...stepNodes, ...noteNodes];
 };
 
-const getEdgeVisibility = (conn: typeof edgeConnections[0], visibleStepCount: number) => {
-  const sourceIndex = stepIndexMap.get(conn.source) ?? -1;
-  const targetIndex = stepIndexMap.get(conn.target) ?? -1;
-  return sourceIndex < visibleStepCount && targetIndex < visibleStepCount;
-};
-
 function App() {
   const [visibleCount, setVisibleCount] = useState(1);
-  const nodePositions = useRef<{ [key: string]: { x: number; y: number } }>({ ...positions });
-
   // Use the initial positions object directly to avoid accessing ref during render
   const initialNodes = useMemo(() => getNodes(1, { ...positions }), []);
   const initialEdges = useMemo(() => edgeConnections.map((conn, index) =>
@@ -258,13 +258,57 @@ function App() {
   const [nodes, setNodes] = useNodesState(initialNodes);
   const [edges, setEdges] = useEdgesState(initialEdges);
 
+  // ⚡ Bolt Optimization: Selective style mutation to avoid O(N) recreations on pagination
+  const updateVisibility = useCallback((newCount: number) => {
+    setNodes(nds => nds.map(node => {
+      let isVisible = false;
+      if (node.type === 'note') {
+        isVisible = newCount >= (noteAppearsMap.get(node.id) ?? 999);
+      } else {
+        const stepIndex = stepIndexMap.get(node.id) ?? -1;
+        isVisible = stepIndex >= 0 && stepIndex < newCount;
+      }
+
+      const expectedOpacity = isVisible ? 1 : 0;
+      const expectedPointerEvents: 'auto' | 'none' = isVisible ? 'auto' : 'none';
+
+      if (node.style?.opacity === expectedOpacity && node.style?.pointerEvents === expectedPointerEvents) {
+        return node;
+      }
+      return {
+        ...node,
+        style: {
+          ...node.style,
+          opacity: expectedOpacity,
+          pointerEvents: expectedPointerEvents,
+        }
+      };
+    }));
+
+    setEdges(eds => eds.map(edge => {
+      const sourceIndex = stepIndexMap.get(edge.source) ?? -1;
+      const targetIndex = stepIndexMap.get(edge.target) ?? -1;
+      const isVisible = sourceIndex >= 0 && sourceIndex < newCount && targetIndex >= 0 && targetIndex < newCount;
+
+      const expectedOpacity = isVisible ? 1 : 0;
+
+      if (edge.style?.opacity === expectedOpacity && edge.animated === isVisible) {
+        return edge;
+      }
+      return {
+        ...edge,
+        animated: isVisible,
+        label: isVisible ? (edge.data?.originalLabel as string | undefined) : undefined,
+        style: {
+          ...edge.style,
+          opacity: expectedOpacity,
+        }
+      };
+    }));
+  }, [setNodes, setEdges]);
+
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      changes.forEach((change) => {
-        if (change.type === 'position' && change.position) {
-          nodePositions.current[change.id] = change.position;
-        }
-      });
       setNodes((nds) => applyNodeChanges(changes, nds));
     },
     [setNodes]
@@ -295,34 +339,21 @@ function App() {
     if (visibleCount < allSteps.length) {
       const newCount = visibleCount + 1;
       setVisibleCount(newCount);
-
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      updateVisibility(newCount);
     }
-  }, [visibleCount, setNodes, setEdges]);
+  }, [visibleCount, updateVisibility]);
 
   const handlePrev = useCallback(() => {
     if (visibleCount > 1) {
       const newCount = visibleCount - 1;
       setVisibleCount(newCount);
-
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      updateVisibility(newCount);
     }
-  }, [visibleCount, setNodes, setEdges]);
+  }, [visibleCount, updateVisibility]);
 
   // ⚡ Bolt Optimization: Reuse memoized initialNodes and initialEdges in reset to prevent O(N) recreations and object allocations.
   const handleReset = useCallback(() => {
     setVisibleCount(1);
-    nodePositions.current = { ...positions };
     setNodes(initialNodes);
     setEdges(initialEdges);
   }, [setNodes, setEdges, initialNodes, initialEdges]);

@@ -1,0 +1,3 @@
+## 2024-05-27 - [Optimize React Flow Array Creation]
+**Learning:** In React Flow, entirely recreating the nodes and edges arrays via map operations on every pagination step causes expensive and unnecessary React object reconciliations, leading to visual flickering and massive GC pressure.
+**Action:** Use functional set state updaters (`setNodes(nds => nds.map(...))`) inside an `updateVisibility` function to selectively modify only the `style` properties (`opacity` and `pointerEvents`) of existing Node and Edge references based on new bounds logic, completely avoiding full array reconstruction and naturally preserving internal state like node drag coordinates.
