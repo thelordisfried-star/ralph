@@ -1,0 +1,3 @@
+## 2024-05-29 - [Optimized React Flow Node/Edge Updates]
+**Learning:** In React Flow, redefining and passing newly instantiated node/edge array configurations into functional state setters (e.g. `setNodes(getNodes(...))`) destroys React's referential equality checks, resulting in full graph re-renders and loss of UI state like node positions during pan/zoom.
+**Action:** When updating dynamic properties of elements (like visibility/opacity), use a functional setter mapping (`setNodes(nds => nds.map(...))`) and selectively mutate only the specific CSS properties or element configurations required, preserving referential stability.
