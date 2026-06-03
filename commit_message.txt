@@ -1,0 +1,9 @@
+⚡ Bolt: [performance improvement]
+
+💡 What: Refactored `handleNext` and `handlePrev` to use a new `updateVisibility` function that leverages functional setters (`setNodes(nds => ...)`, `setEdges(eds => ...)`) to selectively mutate only the `style` properties (opacity, pointerEvents) and label of elements whose visibility changes, instead of recreating all node and edge objects via `getNodes` and `edgeConnections.map(...)` on every step.
+
+🎯 Why: Previously, moving between steps caused a full recreation of all node and edge objects (O(N) operation per step change). This breaks referential stability and can force unnecessary re-renders in the underlying React Flow canvas.
+
+📊 Impact: Significantly reduces GC pressure and object allocations during step transitions, making the UI feel more responsive and eliminating unnecessary re-renders of elements that do not change visibility.
+
+🔬 Measurement: Verifiable by monitoring memory allocations and render times during fast, repeated clicks of the Next/Prev buttons.
