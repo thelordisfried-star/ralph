@@ -1,0 +1,3 @@
+## 2025-06-05 - [Optimize React Flow Re-Renders]
+**Learning:** In React Flow applications, recreating the entire `nodes` and `edges` arrays on every state change causes O(N) object re-allocations and forces React Flow to re-parse all elements, leading to significant layout thrashing and garbage collection spikes.
+**Action:** Always use functional setters (`setNodes(nds => nds.map(...))`) to selectively mutate only the specific properties (e.g., `style`, `hidden`) of elements that actually change, returning the exact original object reference if no change is needed to preserve memoization and reduce re-renders.
