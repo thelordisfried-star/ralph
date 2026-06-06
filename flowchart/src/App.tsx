@@ -185,6 +185,7 @@ function createEdge(conn: typeof edgeConnections[0], visible: boolean): Edge {
     sourceHandle: conn.sourceHandle,
     targetHandle: conn.targetHandle,
     label: visible ? conn.label : undefined,
+    data: { originalLabel: conn.label },
     animated: visible,
     style: {
       stroke: '#222',
@@ -239,11 +240,7 @@ const getNodes = (count: number, currentPositions: { [key: string]: { x: number;
   return [...stepNodes, ...noteNodes];
 };
 
-const getEdgeVisibility = (conn: typeof edgeConnections[0], visibleStepCount: number) => {
-  const sourceIndex = stepIndexMap.get(conn.source) ?? -1;
-  const targetIndex = stepIndexMap.get(conn.target) ?? -1;
-  return sourceIndex < visibleStepCount && targetIndex < visibleStepCount;
-};
+
 
 function App() {
   const [visibleCount, setVisibleCount] = useState(1);
@@ -291,33 +288,73 @@ function App() {
     [setEdges]
   );
 
+  // ⚡ Bolt Optimization: Use functional state setters to update visibility styles directly, avoiding O(N) full recreation of nodes and edges.
+  const updateVisibility = useCallback((newCount: number) => {
+    setVisibleCount(newCount);
+
+    setNodes((nds) => nds.map((node) => {
+      let isVisible = false;
+      if (node.type === 'custom') {
+        const stepIndex = stepIndexMap.get(node.id) ?? -1;
+        isVisible = stepIndex !== -1 && stepIndex < newCount;
+      } else if (node.type === 'note') {
+        const noteConfig = notes.find(n => n.id === node.id);
+        const appearsWith = noteConfig?.appearsWithStep ?? 999;
+        isVisible = newCount >= appearsWith;
+      }
+
+      const targetOpacity = isVisible ? 1 : 0;
+      const targetPointerEvents: 'auto' | 'none' = isVisible ? 'auto' : 'none';
+
+      if (node.style?.opacity !== targetOpacity || node.style?.pointerEvents !== targetPointerEvents) {
+        return {
+          ...node,
+          style: {
+            ...node.style,
+            opacity: targetOpacity,
+            pointerEvents: targetPointerEvents,
+          }
+        };
+      }
+      return node;
+    }));
+
+    setEdges((eds) => eds.map((edge) => {
+      const sourceIndex = stepIndexMap.get(edge.source) ?? -1;
+      const targetIndex = stepIndexMap.get(edge.target) ?? -1;
+      const isVisible = sourceIndex !== -1 && targetIndex !== -1 && sourceIndex < newCount && targetIndex < newCount;
+
+      const targetOpacity = isVisible ? 1 : 0;
+      const targetStroke = isVisible ? '#222' : 'transparent';
+      const currentOpacity = edge.style?.opacity;
+
+      if (currentOpacity !== targetOpacity) {
+        return {
+          ...edge,
+          animated: isVisible,
+          label: isVisible ? (edge.data?.originalLabel as string | undefined) : undefined,
+          style: {
+            ...edge.style,
+            opacity: targetOpacity,
+            stroke: targetStroke,
+          }
+        };
+      }
+      return edge;
+    }));
+  }, [setNodes, setEdges]);
+
   const handleNext = useCallback(() => {
     if (visibleCount < allSteps.length) {
-      const newCount = visibleCount + 1;
-      setVisibleCount(newCount);
-
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      updateVisibility(visibleCount + 1);
     }
-  }, [visibleCount, setNodes, setEdges]);
+  }, [visibleCount, updateVisibility]);
 
   const handlePrev = useCallback(() => {
     if (visibleCount > 1) {
-      const newCount = visibleCount - 1;
-      setVisibleCount(newCount);
-
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      updateVisibility(visibleCount - 1);
     }
-  }, [visibleCount, setNodes, setEdges]);
+  }, [visibleCount, updateVisibility]);
 
   // ⚡ Bolt Optimization: Reuse memoized initialNodes and initialEdges in reset to prevent O(N) recreations and object allocations.
   const handleReset = useCallback(() => {
