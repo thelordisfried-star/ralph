@@ -1,0 +1,3 @@
+## 2024-06-07 - React Flow State Optimization
+**Learning:** In the `flowchart` React Flow application, recreating entire node/edge arrays on state changes (`getNodes`) forces heavy React Flow re-renders and breaks native pan/zoom persistence without a manual `useRef` hack. Adding end-to-end testing dependencies (like `playwright`) to `package.json` for validation is a severe negative constraint violation.
+**Action:** When updating React Flow visibility states, rely exclusively on functional setters (`setNodes(nds => ...)`) to mutate only `style` properties, eliminating `O(N)` recreation and the need for refs. Always clean up test artifacts and revert `package.json` lock modifications after visual verification.
