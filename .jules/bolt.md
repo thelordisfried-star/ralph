@@ -1,0 +1,3 @@
+## 2024-06-18 - React Flow Array Recreation Bottleneck
+**Learning:** React Flow strictly binds object reference identity for reconciliation. In `App.tsx`, explicitly recreating `nodes` and `edges` arrays using `.map()` on every iteration inside `handleNext`/`handlePrev` forces complete graph re-renders and abandons underlying state like node drag positions.
+**Action:** Always implement selective mutations for visual toggles. Use functional setters (`setNodes(nds => nds.map(...))`), updating only `style` and `animated` properties if they differ, and explicitly returning the original object if no visual delta exists to preserve referential identity.
