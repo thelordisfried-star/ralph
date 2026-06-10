@@ -1,0 +1,3 @@
+## 2024-11-21 - [Safe Edge Data Preservation during Visualization Toggle]
+**Learning:** [When toggling React Flow edge visibility dynamically via a functional setter `setEdges(eds => eds.map(...))`, simply setting `label: undefined` to hide labels will result in permanent data loss if the label is needed again. You must safely stash the original label within the edge's `data` object upon creation.]
+**Action:** [Always include `data: { originalLabel: conn.label }` inside `createEdge` implementations and explicitly cast `originalLabel = edge.data?.originalLabel as string | undefined` during the visibility update to satisfy TypeScript and prevent edge state bugs.]
