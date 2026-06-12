@@ -1,0 +1,3 @@
+## 2025-02-20 - ReactFlow State Reallocation Bottleneck
+**Learning:** In `App.tsx`, tracking user-dragged nodes using a mutable `useRef` and completely regenerating the nodes/edges arrays on every state transition (Next/Prev) forces massive object reallocation, triggering unnecessary React component renders and breaking ReactFlow's internal memoization.
+**Action:** Replace full array regeneration with functional state setters (`setNodes(nds => nds.map(...))`) that selectively modify CSS visibility properties (`opacity`, `pointerEvents`, `stroke`). This preserves the existing object references and allows ReactFlow to internally maintain node positions, eliminating the need for manual `useRef` tracking.
