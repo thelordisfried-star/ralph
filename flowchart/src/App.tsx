@@ -122,6 +122,7 @@ const NoteNode = memo(function NoteNode({ data }: { data: { content: string; col
 const nodeTypes = { custom: CustomNode, note: NoteNode };
 
 const stepIndexMap = new Map(allSteps.map((s, i) => [s.id, i]));
+const noteAppearsMap = new Map(notes.map(n => [n.id, n.appearsWithStep]));
 
 const positions: { [key: string]: { x: number; y: number } } = {
   // Vertical setup flow on the left
@@ -186,6 +187,7 @@ function createEdge(conn: typeof edgeConnections[0], visible: boolean): Edge {
     targetHandle: conn.targetHandle,
     label: visible ? conn.label : undefined,
     animated: visible,
+    data: { originalLabel: conn.label },
     style: {
       stroke: '#222',
       strokeWidth: 2,
@@ -233,7 +235,7 @@ const getNodes = (count: number, currentPositions: { [key: string]: { x: number;
     createNode(step, index < count, currentPositions[step.id])
   );
   const noteNodes = notes.map(note => {
-    const noteVisible = count >= note.appearsWithStep;
+    const noteVisible = count >= (noteAppearsMap.get(note.id) ?? Infinity);
     return createNoteNode(note, noteVisible, currentPositions[note.id]);
   });
   return [...stepNodes, ...noteNodes];
@@ -257,6 +259,49 @@ function App() {
 
   const [nodes, setNodes] = useNodesState(initialNodes);
   const [edges, setEdges] = useEdgesState(initialEdges);
+
+  // ⚡ Bolt Optimization: Use functional setters to selectively update visibility properties.
+  // This prevents O(N) array recreation and object allocations, and preserves internal React Flow dimension/position state naturally.
+  const updateVisibility = useCallback((newCount: number) => {
+    setNodes(nds => nds.map(node => {
+      const isVisible =
+        node.type === 'note'
+          ? newCount >= (noteAppearsMap.get(node.id) ?? Infinity)
+          : (stepIndexMap.get(node.id) ?? Infinity) < newCount;
+      const expectedOpacity = isVisible ? 1 : 0;
+      const expectedPointerEvents: 'auto' | 'none' = isVisible ? 'auto' : 'none';
+      if (node.style?.opacity === expectedOpacity && node.style?.pointerEvents === expectedPointerEvents) {
+        return node;
+      }
+      return {
+        ...node,
+        style: {
+          ...node.style,
+          opacity: expectedOpacity,
+          pointerEvents: expectedPointerEvents,
+        },
+      };
+    }));
+
+    setEdges(eds => eds.map(edge => {
+      const isVisible = getEdgeVisibility({ source: edge.source, target: edge.target } as typeof edgeConnections[0], newCount);
+      const expectedOpacity = isVisible ? 1 : 0;
+      const expectedLabel = isVisible ? (edge.data?.originalLabel as string | undefined) : undefined;
+
+      if (edge.style?.opacity === expectedOpacity && edge.label === expectedLabel) {
+        return edge;
+      }
+      return {
+        ...edge,
+        label: expectedLabel,
+        animated: isVisible,
+        style: {
+          ...edge.style,
+          opacity: expectedOpacity,
+        },
+      };
+    }));
+  }, [setNodes, setEdges]);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
@@ -295,29 +340,17 @@ function App() {
     if (visibleCount < allSteps.length) {
       const newCount = visibleCount + 1;
       setVisibleCount(newCount);
-
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      updateVisibility(newCount);
     }
-  }, [visibleCount, setNodes, setEdges]);
+  }, [visibleCount, updateVisibility]);
 
   const handlePrev = useCallback(() => {
     if (visibleCount > 1) {
       const newCount = visibleCount - 1;
       setVisibleCount(newCount);
-
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      updateVisibility(newCount);
     }
-  }, [visibleCount, setNodes, setEdges]);
+  }, [visibleCount, updateVisibility]);
 
   // ⚡ Bolt Optimization: Reuse memoized initialNodes and initialEdges in reset to prevent O(N) recreations and object allocations.
   const handleReset = useCallback(() => {
