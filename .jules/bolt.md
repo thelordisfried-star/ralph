@@ -1,0 +1,3 @@
+## 2024-06-24 - React Flow Internal State Destruction via Full Array Replacement
+**Learning:** In React Flow, re-creating entire node and edge arrays from scratch on every state update (e.g., `setNodes(getNodes(...))`) forces the library to discard internal node state and re-initialize dimensions. This leads to brittle workarounds like tracking x/y coordinates via refs (`nodePositions.current`).
+**Action:** Always use functional state updates (e.g., `setNodes(nds => nds.map(...))`) to selectively update properties (like visibility styles) of existing nodes to preserve internal state and positioning natively without external refs.
