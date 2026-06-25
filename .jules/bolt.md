@@ -1,0 +1,3 @@
+## 2024-06-25 - React Flow Node Array Recreation Bottleneck
+**Learning:** In `App.tsx`, completely tearing down and recreating the entire nodes and edges arrays upon every step change (`handleNext`/`handlePrev`) using a `getNodes` utility forces React Flow to do heavy diffing and lose its internal position states. This previously necessitated brittle workarounds like tracking coordinates in a `useRef` and manually resetting them on array creation.
+**Action:** Always use functional state updates (`nds => nds.map(...)`) to selectively modify specific style properties (like `opacity` and `pointerEvents`) on existing React Flow elements, preserving referential equality, graph layout, and natural positioning natively.
