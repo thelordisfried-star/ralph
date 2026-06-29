@@ -1,0 +1,3 @@
+## 2025-02-17 - React Flow State Optimization
+**Learning:** In React Flow, re-creating entire node and edge arrays from scratch on every state update forces the library to discard internal node state and re-initialize dimensions, causing heavy O(N) object allocation overhead on hot paths like step toggling, which manifests as sluggish performance when handling larger graphs.
+**Action:** Always use functional state updates (e.g., \`setNodes(nds => nds.map(...))\`) to selectively mutate properties (like visibility styles) of existing nodes to natively preserve referential stability and optimize render cycles, instead of repeatedly instantiating objects during state updates.
