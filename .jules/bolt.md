@@ -1,0 +1,3 @@
+## 2024-06-30 - O(N) Array Re-creation in React Flow
+**Learning:** Re-creating entire React Flow element arrays from scratch (e.g. `setNodes(getNodes(...))`) forces complete object re-allocation and bypasses React Flow's internal referential equality checks, triggering full O(N) re-renders and potentially breaking internal state mapping.
+**Action:** Use functional state updates (`setNodes(nds => nds.map(...))`) to selectively update specific properties (like `style` visibility) while maintaining referential stability for unmodified elements. Embed metadata directly into element `data` objects at creation for fast O(1) attribute lookup during updates.
