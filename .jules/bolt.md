@@ -1,0 +1,7 @@
+## 2025-02-18 - Functional State Updates and Object Re-creations in React Flow
+**Learning:** In React Flow, attempting to optimize visibility changes by recreating the entire `initialNodes` and `initialEdges` array from scratch inside `handleNext`/`handlePrev` causes a complete re-initialization of internal node state (like dragged positions). Switching to a functional setter approach (`setNodes(nds => nds.map(...))`) safely allows selective updates to `style` parameters (like `opacity` and `pointerEvents`) while preserving state natively.
+**Action:** Always prefer functional `.map()` setters with object spread (`...node`) when modifying visual properties of existing React Flow elements to preserve referential stability and internal state.
+
+## 2025-02-18 - Missing data payloads in manually drawn edges
+**Learning:** When users manually draw edges between nodes in React Flow via the UI (handled by `onConnect` calling `addEdge`), the generated edge object does not contain a `data` property. If functional setters map over these edges and attempt to access `edge.data` properties (like index maps) with a non-null assertion (`!`), the application will crash with `TypeError: Cannot read properties of undefined`.
+**Action:** Always include a guard clause (e.g., `if (!edge.data) return edge;`) in `.map()` loops when iterating over React Flow elements to gracefully handle manually created, data-less user components.
