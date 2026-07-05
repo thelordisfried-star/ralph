@@ -166,6 +166,7 @@ function createNode(step: typeof allSteps[0], visible: boolean, position?: { x: 
       title: step.label,
       description: step.description,
       phase: step.phase,
+      stepIndex: stepIndexMap.get(step.id) ?? -1,
     },
     style: {
       width: nodeWidth,
@@ -185,6 +186,11 @@ function createEdge(conn: typeof edgeConnections[0], visible: boolean): Edge {
     sourceHandle: conn.sourceHandle,
     targetHandle: conn.targetHandle,
     label: visible ? conn.label : undefined,
+    data: {
+      sourceIndex: stepIndexMap.get(conn.source) ?? -1,
+      targetIndex: stepIndexMap.get(conn.target) ?? -1,
+      originalLabel: conn.label,
+    },
     animated: visible,
     style: {
       stroke: '#222',
@@ -216,7 +222,7 @@ function createNoteNode(note: typeof notes[0], visible: boolean, position?: { x:
     id: note.id,
     type: 'note',
     position: position || positions[note.id],
-    data: { content: note.content, color: note.color },
+    data: { content: note.content, color: note.color, appearsWithStep: note.appearsWithStep },
     style: {
       opacity: visible ? 1 : 0,
       transition: 'opacity 0.5s ease-in-out',
@@ -239,12 +245,6 @@ const getNodes = (count: number, currentPositions: { [key: string]: { x: number;
   return [...stepNodes, ...noteNodes];
 };
 
-const getEdgeVisibility = (conn: typeof edgeConnections[0], visibleStepCount: number) => {
-  const sourceIndex = stepIndexMap.get(conn.source) ?? -1;
-  const targetIndex = stepIndexMap.get(conn.target) ?? -1;
-  return sourceIndex < visibleStepCount && targetIndex < visibleStepCount;
-};
-
 function App() {
   const [visibleCount, setVisibleCount] = useState(1);
   const nodePositions = useRef<{ [key: string]: { x: number; y: number } }>({ ...positions });
@@ -257,6 +257,51 @@ function App() {
 
   const [nodes, setNodes] = useNodesState(initialNodes);
   const [edges, setEdges] = useEdgesState(initialEdges);
+
+  const updateVisibility = useCallback((newCount: number) => {
+    setVisibleCount(newCount);
+    setNodes((nds) =>
+      nds.map((node) => {
+        if (!node.data) return node;
+        let isVisible = false;
+        if (node.type === 'custom') {
+          const stepIndex = typeof node.data.stepIndex === 'number' ? node.data.stepIndex : -1;
+          isVisible = stepIndex > -1 && stepIndex < newCount;
+        } else if (node.type === 'note') {
+          const appearsWithStep = typeof node.data.appearsWithStep === 'number' ? node.data.appearsWithStep : Infinity;
+          isVisible = newCount >= appearsWithStep;
+        }
+
+        return {
+          ...node,
+          style: {
+            ...node.style,
+            opacity: isVisible ? 1 : 0,
+            pointerEvents: (isVisible ? 'auto' : 'none') as 'auto' | 'none',
+          },
+        };
+      })
+    );
+    setEdges((eds) =>
+      eds.map((edge) => {
+        if (!edge.data) return edge;
+        const sourceIndex = typeof edge.data.sourceIndex === 'number' ? edge.data.sourceIndex : -1;
+        const targetIndex = typeof edge.data.targetIndex === 'number' ? edge.data.targetIndex : -1;
+        const isVisible = sourceIndex > -1 && targetIndex > -1 && sourceIndex < newCount && targetIndex < newCount;
+
+        return {
+          ...edge,
+          label: isVisible ? (edge.data.originalLabel as string | undefined) : undefined,
+          animated: isVisible,
+          style: {
+            ...edge.style,
+            opacity: isVisible ? 1 : 0,
+          },
+        };
+      })
+    );
+  }, [setNodes, setEdges]);
+
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
@@ -293,31 +338,15 @@ function App() {
 
   const handleNext = useCallback(() => {
     if (visibleCount < allSteps.length) {
-      const newCount = visibleCount + 1;
-      setVisibleCount(newCount);
-
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      updateVisibility(visibleCount + 1);
     }
-  }, [visibleCount, setNodes, setEdges]);
+  }, [visibleCount, updateVisibility]);
 
   const handlePrev = useCallback(() => {
     if (visibleCount > 1) {
-      const newCount = visibleCount - 1;
-      setVisibleCount(newCount);
-
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      updateVisibility(visibleCount - 1);
     }
-  }, [visibleCount, setNodes, setEdges]);
+  }, [visibleCount, updateVisibility]);
 
   // ⚡ Bolt Optimization: Reuse memoized initialNodes and initialEdges in reset to prevent O(N) recreations and object allocations.
   const handleReset = useCallback(() => {

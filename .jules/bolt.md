@@ -1,0 +1,3 @@
+## 2024-05-18 - React Flow State Array Re-creation Anti-pattern
+**Learning:** Re-creating entire node and edge arrays from scratch during state updates (e.g., mapping over a config array and replacing the state completely) in React Flow is extremely inefficient. It forces the library to discard internal node state, lose DOM refs, and remount components unnecessarily, which can break features like panning and dragging or require brittle workarounds.
+**Action:** Always use functional state updates (`setNodes(nds => nds.map(...))`) to selectively update specific properties (like CSS styles or labels) of existing node/edge objects, preserving their referential stability and internal React Flow state.
