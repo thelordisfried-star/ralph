@@ -1,0 +1,3 @@
+## 2024-05-18 - Replacing O(N) Initialization with O(1) Updates in React Flow
+**Learning:** When building an interactive UI with React Flow that requires toggling visibility for many nodes/edges iteratively (like a presentation), re-creating the nodes/edges arrays entirely from scratch on state updates causes React Flow to discard internal node layout state and forces costly recalculations.
+**Action:** Always embed indexing metadata into `node.data` / `edge.data` upon initial creation, and use functional state updates (`setNodes(nds => nds.map(...))`) to perform O(1) mutations against the `style` property to securely preserve internal React Flow referential stability and zoom/pan coordinates.
