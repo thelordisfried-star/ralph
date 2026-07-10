@@ -166,6 +166,7 @@ function createNode(step: typeof allSteps[0], visible: boolean, position?: { x: 
       title: step.label,
       description: step.description,
       phase: step.phase,
+      stepIndex: stepIndexMap.get(step.id) ?? -1,
     },
     style: {
       width: nodeWidth,
@@ -182,6 +183,11 @@ function createEdge(conn: typeof edgeConnections[0], visible: boolean): Edge {
     id: `e${conn.source}-${conn.target}`,
     source: conn.source,
     target: conn.target,
+    data: {
+      originalLabel: conn.label,
+      sourceIndex: stepIndexMap.get(conn.source) ?? -1,
+      targetIndex: stepIndexMap.get(conn.target) ?? -1,
+    },
     sourceHandle: conn.sourceHandle,
     targetHandle: conn.targetHandle,
     label: visible ? conn.label : undefined,
@@ -216,7 +222,7 @@ function createNoteNode(note: typeof notes[0], visible: boolean, position?: { x:
     id: note.id,
     type: 'note',
     position: position || positions[note.id],
-    data: { content: note.content, color: note.color },
+    data: { content: note.content, color: note.color, appearsWithStep: note.appearsWithStep },
     style: {
       opacity: visible ? 1 : 0,
       transition: 'opacity 0.5s ease-in-out',
@@ -239,11 +245,61 @@ const getNodes = (count: number, currentPositions: { [key: string]: { x: number;
   return [...stepNodes, ...noteNodes];
 };
 
-const getEdgeVisibility = (conn: typeof edgeConnections[0], visibleStepCount: number) => {
-  const sourceIndex = stepIndexMap.get(conn.source) ?? -1;
-  const targetIndex = stepIndexMap.get(conn.target) ?? -1;
-  return sourceIndex < visibleStepCount && targetIndex < visibleStepCount;
+// ⚡ Bolt Optimization: Use functional state updates to only modify node styles when visibility changes,
+// preserving referential equality for unchanged nodes and preventing React Flow state resets.
+const updateNodesVisibility = (count: number) => {
+  return (nds: Node[]) => nds.map((node) => {
+    let visible = false;
+    if (node.type === 'custom') {
+      visible = (node.data?.stepIndex as number ?? 999) < count;
+    } else if (node.type === 'note') {
+      visible = count >= (node.data?.appearsWithStep as number ?? 999);
+    }
+
+    const targetOpacity = visible ? 1 : 0;
+    const targetPointerEvents = visible ? 'auto' : 'none';
+
+    if (node.style?.opacity === targetOpacity) {
+      return node;
+    }
+
+    return {
+      ...node,
+      style: {
+        ...node.style,
+        opacity: targetOpacity,
+        pointerEvents: targetPointerEvents as 'auto' | 'none',
+      }
+    };
+  });
 };
+
+// ⚡ Bolt Optimization: Use functional state updates to only modify edge styles when visibility changes,
+// preserving referential equality for unchanged edges and preventing React Flow state resets.
+const updateEdgesVisibility = (count: number) => {
+  return (eds: Edge[]) => eds.map((edge) => {
+    const sIndex = edge.data?.sourceIndex as number ?? -1;
+    const tIndex = edge.data?.targetIndex as number ?? -1;
+    const visible = sIndex < count && tIndex < count;
+
+    const targetOpacity = visible ? 1 : 0;
+
+    if (edge.style?.opacity === targetOpacity) {
+      return edge;
+    }
+
+    return {
+      ...edge,
+      label: visible ? (edge.data?.originalLabel as string | undefined) : undefined,
+      animated: visible,
+      style: {
+        ...edge.style,
+        opacity: targetOpacity,
+      }
+    };
+  });
+};
+
 
 function App() {
   const [visibleCount, setVisibleCount] = useState(1);
@@ -296,12 +352,8 @@ function App() {
       const newCount = visibleCount + 1;
       setVisibleCount(newCount);
 
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      setNodes(updateNodesVisibility(newCount));
+      setEdges(updateEdgesVisibility(newCount));
     }
   }, [visibleCount, setNodes, setEdges]);
 
@@ -310,12 +362,8 @@ function App() {
       const newCount = visibleCount - 1;
       setVisibleCount(newCount);
 
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      setNodes(updateNodesVisibility(newCount));
+      setEdges(updateEdgesVisibility(newCount));
     }
   }, [visibleCount, setNodes, setEdges]);
 
