@@ -1,0 +1,3 @@
+## 2024-07-11 - React Flow State Initialization and Mutation
+**Learning:** In React Flow, re-creating entire node and edge arrays from scratch on every state update (e.g., `getNodes()`) forces the library to discard internal node state and re-evaluate dimensions, requiring brittle workarounds like tracking coordinates via refs. Embedding metadata (`stepIndex`) into `node.data` enables O(1) functional state updates (`setNodes(nds => nds.map(...))`) to toggle visibility directly without full recreation.
+**Action:** Always use functional state updates mapped over existing arrays for style toggling rather than rebuilding the entire layout array from scratch.
