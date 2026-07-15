@@ -1,0 +1,3 @@
+## 2024-05-18 - React Flow Visual Regression via Aggressive Opacity
+**Learning:** When transitioning a React Flow codebase from O(N) array recreation to functional state updates, it is easy to assume that 'inactive' edges should be completely hidden via `opacity: 0`. However, if the original edge creation logic rendered inactive edges as solid lines (only toggling animations and labels), applying `opacity: 0` causes a jarring visual regression where structural connecting lines vanish entirely.
+**Action:** Always carefully check the original style definitions of elements in their 'inactive' or 'default' state before applying generic visibility styles like `opacity: 0`. Ensure the optimization strictly preserves existing visual behaviors.
