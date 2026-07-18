@@ -1,0 +1,3 @@
+## 2024-06-13 - [State Update Optimization in React Flow]
+**Learning:** Re-creating entire node and edge arrays from scratch on every state update (e.g. via `getNodes` and `createEdge`) forces the library to discard internal node state and re-initialize dimensions, leading to performance issues and unnecessary allocations. Direct access without recalculations, using embedded step indexes in `data`, optimizes filtering during functional state updates.
+**Action:** Always use functional state updates (e.g., `setNodes(nds => nds.map(...))`) to selectively update properties (like visibility styles) of existing nodes to preserve internal state and positioning natively, returning the original unchanged element instance to guarantee referential equality.
