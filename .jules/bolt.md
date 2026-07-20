@@ -1,0 +1,3 @@
+## 2024-07-20 - [Optimize React Flow Performance with Functional Updates]
+**Learning:** Recreating entire arrays for nodes and edges during every step increment caused heavy O(N) object allocations and potential re-render lag. React Flow handles visibility natively by relying on style updates.
+**Action:** By embedding metadata (`stepIndex`, `sourceIndex`, `targetIndex`) directly in node/edge `data` payloads, we can selectively update just the `style.opacity` attributes via functional state setters (`setNodes(nds => nds.map(...))`) in an O(1) attribute swap without discarding positional/internal object states, significantly boosting UI stability.
