@@ -1,0 +1,3 @@
+## 2024-05-24 - React Flow Performance Optimization with Metadata Injection
+**Learning:** Re-creating entire node and edge arrays natively triggers full state resets inside React Flow because object referential equality is lost, meaning `fitView` positioning, drag states, and dimension calculations are destroyed. In complex flows, using global state replacements for visual pagination causes severe visual jumping.
+**Action:** Always embed static structural metadata directly into `node.data` and `edge.data` upon initial creation (via `useMemo`). This allows you to use a purely functional `setNodes(nds => nds.map(...))` that selectively modifies style/opacity objects in O(1) matching time while preserving referential stability of the core React Flow data structure.
