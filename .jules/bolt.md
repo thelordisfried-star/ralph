@@ -1,0 +1,3 @@
+## 2024-07-25 - React Flow Optimization
+**Learning:** Re-creating entire node and edge arrays from scratch on every state update in React Flow forces the library to discard internal node state and re-initialize dimensions. This requires brittle workarounds like tracking x/y coordinates via refs.
+**Action:** Always use functional state updates (e.g., `setNodes(nds => nds.map(...))`) to selectively update properties (like visibility styles) of existing nodes to preserve internal state and positioning natively, and embed any necessary metadata for visibility into the `node.data` / `edge.data` properties.
