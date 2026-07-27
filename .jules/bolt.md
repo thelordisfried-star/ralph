@@ -1,0 +1,3 @@
+## 2024-07-27 - [Optimize React Flow State Updates]
+**Learning:** In React Flow, constantly re-creating entire node and edge arrays with \`getNodes\` (O(N) object recreation on every step) forces the library to discard internal node state, triggering sluggish re-renders and potential loss of user-dragged node coordinates if not carefully tracked with refs.
+**Action:** Always use functional state updates (e.g. \`setNodes(nds => nds.map(...))\`) to selectively mutate styles (like \`opacity: 1\`) on existing nodes and edges in-place, eliminating O(N) array recreation and the need to track positions via \`useRef\`.
