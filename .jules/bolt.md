@@ -1,0 +1,3 @@
+## 2024-05-19 - React Flow Array Recreation Avoidance via Functional Update Hooks
+**Learning:** Re-creating entire node/edge arrays on every state update inside `App.tsx` discards internal React Flow state and causes severe performance degredation (unnecessary O(N) array mapping and lookup iteration on maps) and requires workarounds to preserve coordinates on pan/drag events.
+**Action:** When updating React Flow components visibility dynamically, embed logic directly onto properties (`data.stepIndex`) exactly once in the initial initialization payload, then only use functional setters (`setNodes(nds => nds.map(...))`) modifying CSS properties selectively to preserve layout state inherently.
