@@ -1,0 +1,3 @@
+## 2024-07-31 - React Flow Node Recreation Anti-Pattern
+**Learning:** Re-creating entire node arrays via `.map` and returning new object references on every step change forces React Flow to discard internal node state, re-initialize dimensions, and reset dragged coordinate positions. This originally required a brittle manual sync using a `useRef(nodePositions)` object.
+**Action:** Always use functional state updates (`setNodes(nds => nds.map(...))`) and selectively mutate only presentation styles (like opacity) while checking for existing property matches to preserve referential equality (`if (node.style?.opacity === newOpacity) return node;`). This fixes the O(N) reallocation and allows native React Flow coordinate handling to work.
