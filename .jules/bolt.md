@@ -1,0 +1,3 @@
+## 2024-08-03 - [React Flow Functional Updates]
+**Learning:** [In React Flow, re-creating entire node and edge arrays from scratch on every state update using helper functions like `getNodes` forces the library to discard internal node state and re-initialize dimensions. This required brittle workarounds like tracking x/y coordinates via `useRef` to preserve positions during standard step progressions.]
+**Action:** [Always use functional state updates (e.g., `setNodes(nds => nds.map(...))`) to selectively update properties (like visibility styles or opacities) of existing nodes/edges. Check if the property already matches before returning a new object to preserve referential equality and prevent React re-renders entirely.]
