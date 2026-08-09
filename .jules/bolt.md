@@ -1,0 +1,3 @@
+## 2024-08-09 - React Flow Node Array Recreation Anti-Pattern
+**Learning:** Re-creating entire node and edge arrays from scratch on every state update in React Flow forces the library to discard internal node state and re-initialize dimensions, requiring brittle workarounds like tracking x/y coordinates via refs. Re-renders also become O(N) operations.
+**Action:** Always use functional state updates (e.g., `setNodes(nds => nds.map(...))`) with O(1) embedded data lookups to selectively update properties (like visibility styles) of existing nodes to preserve internal state and positioning natively, returning the unchanged object when possible to maintain referential equality.
