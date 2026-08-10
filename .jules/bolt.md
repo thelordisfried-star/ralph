@@ -1,0 +1,3 @@
+## 2024-08-10 - React Flow State Array Allocation Bottleneck
+**Learning:** In React Flow, entirely re-creating the `nodes` and `edges` arrays on every state update (e.g., via a `getNodes` map function) causes the library to discard internal node state, forcing costly O(N) object allocations and breaking pan/zoom positioning natively.
+**Action:** Always use functional state updates (`setNodes(nds => nds.map(...))`) for visibility or style toggles, explicitly checking if the new property matches the existing property (`node.style?.opacity === opacity`) to return the original reference unmodified and prevent unnecessary React re-renders.
