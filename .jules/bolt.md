@@ -1,0 +1,3 @@
+## 2025-02-18 - React Flow State Loss from Array Recreation
+**Learning:** Re-creating entire node and edge arrays from scratch on every state update in React Flow forces the library to discard internal element state (like position changes from dragging). This forces developers to write brittle workarounds using `useRef` to manually sync positions.
+**Action:** Always use functional state updates (e.g., `setNodes(nds => nds.map(...))`) to toggle element properties like visibility styles, and embed lookup metadata inside the element's `data` object to facilitate O(1) checks during the map operation.
