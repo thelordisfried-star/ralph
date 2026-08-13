@@ -1,0 +1,3 @@
+## 2024-11-20 - Functional State Updates and Node Data Inference
+**Learning:** When using functional state updates (`setNodes(nds => nds.map(...))`) in React Flow to toggle visibility properties on edges/nodes dynamically without re-creating all items, modifying `style` property types from inferences derived from `data` mappings causes strict TS mismatch errors.
+**Action:** Make sure to cast the resulting values explicitly to string/literal unions, for instance `pointerEvents: 'auto' | 'none'`, and always provide the guard condition if node.data is missing for resilience. Ensure to preserve internal positioning metadata by modifying node styles on `nds` arrays rather than recreating `[...allSteps]`.
