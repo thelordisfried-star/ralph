@@ -1,0 +1,3 @@
+## 2024-05-24 - React Flow Functional Updates with O(1) Lookups
+**Learning:** When using React Flow, completely recreating the `nodes` and `edges` arrays on state changes (e.g., using a factory function like `getNodes()`) forces React and React Flow to reconcile large object arrays and loses referential equality. This can lead to significant rendering bottlenecks.
+**Action:** Embed metadata (like `stepIndex`, `sourceIndex`, `targetIndex`) directly into the element `.data` objects during initialization. Then, use functional state updates (e.g., `setNodes(nds => nds.map(...))`) with O(1) property access to selectively update visual properties (like `opacity`) while returning the unmodified original object if no changes occurred to preserve referential equality.
