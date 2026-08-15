@@ -158,6 +158,7 @@ const edgeConnections: { source: string; target: string; sourceHandle?: string; 
 ];
 
 function createNode(step: typeof allSteps[0], visible: boolean, position?: { x: number; y: number }): Node {
+  const stepIndex = stepIndexMap.get(step.id) ?? -1;
   return {
     id: step.id,
     type: 'custom',
@@ -166,6 +167,7 @@ function createNode(step: typeof allSteps[0], visible: boolean, position?: { x: 
       title: step.label,
       description: step.description,
       phase: step.phase,
+      stepIndex,
     },
     style: {
       width: nodeWidth,
@@ -178,12 +180,15 @@ function createNode(step: typeof allSteps[0], visible: boolean, position?: { x: 
 }
 
 function createEdge(conn: typeof edgeConnections[0], visible: boolean): Edge {
+  const sourceIndex = stepIndexMap.get(conn.source) ?? -1;
+  const targetIndex = stepIndexMap.get(conn.target) ?? -1;
   return {
     id: `e${conn.source}-${conn.target}`,
     source: conn.source,
     target: conn.target,
     sourceHandle: conn.sourceHandle,
     targetHandle: conn.targetHandle,
+    data: { sourceIndex, targetIndex, originalLabel: conn.label },
     label: visible ? conn.label : undefined,
     animated: visible,
     style: {
@@ -216,7 +221,7 @@ function createNoteNode(note: typeof notes[0], visible: boolean, position?: { x:
     id: note.id,
     type: 'note',
     position: position || positions[note.id],
-    data: { content: note.content, color: note.color },
+    data: { content: note.content, color: note.color, appearsWithStep: note.appearsWithStep },
     style: {
       opacity: visible ? 1 : 0,
       transition: 'opacity 0.5s ease-in-out',
@@ -239,11 +244,7 @@ const getNodes = (count: number, currentPositions: { [key: string]: { x: number;
   return [...stepNodes, ...noteNodes];
 };
 
-const getEdgeVisibility = (conn: typeof edgeConnections[0], visibleStepCount: number) => {
-  const sourceIndex = stepIndexMap.get(conn.source) ?? -1;
-  const targetIndex = stepIndexMap.get(conn.target) ?? -1;
-  return sourceIndex < visibleStepCount && targetIndex < visibleStepCount;
-};
+
 
 function App() {
   const [visibleCount, setVisibleCount] = useState(1);
@@ -296,12 +297,53 @@ function App() {
       const newCount = visibleCount + 1;
       setVisibleCount(newCount);
 
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      setNodes(nds => nds.map(node => {
+        if (!node.data) return node;
+        let visible = false;
+        if (node.type === 'custom') {
+          const sIdx = node.data.stepIndex as number | undefined;
+          visible = sIdx !== undefined && sIdx < newCount;
+        } else if (node.type === 'note') {
+          const aw = node.data.appearsWithStep as number | undefined;
+          visible = aw !== undefined && newCount >= aw;
+        } else {
+          return node;
+        }
+
+        const opacity = visible ? 1 : 0;
+        const pointerEvents = visible ? 'auto' : 'none';
+
+        if (node.style?.opacity === opacity) return node;
+
+        return {
+          ...node,
+          style: {
+            ...node.style,
+            opacity,
+            pointerEvents: pointerEvents as 'auto' | 'none',
+          }
+        };
+      }));
+
+      setEdges(eds => eds.map(edge => {
+        if (!edge.data) return edge;
+        const sIdx = edge.data.sourceIndex as number | undefined;
+        const tIdx = edge.data.targetIndex as number | undefined;
+        const visible = (sIdx !== undefined && tIdx !== undefined) && (sIdx < newCount && tIdx < newCount);
+        const opacity = visible ? 1 : 0;
+
+        if (edge.style?.opacity === opacity) return edge;
+
+        return {
+          ...edge,
+          animated: visible,
+          label: visible ? (edge.data.originalLabel as string | undefined) : undefined,
+          style: {
+            ...edge.style,
+            opacity,
+          }
+        };
+      }));
     }
   }, [visibleCount, setNodes, setEdges]);
 
@@ -310,12 +352,53 @@ function App() {
       const newCount = visibleCount - 1;
       setVisibleCount(newCount);
 
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      setNodes(nds => nds.map(node => {
+        if (!node.data) return node;
+        let visible = false;
+        if (node.type === 'custom') {
+          const sIdx = node.data.stepIndex as number | undefined;
+          visible = sIdx !== undefined && sIdx < newCount;
+        } else if (node.type === 'note') {
+          const aw = node.data.appearsWithStep as number | undefined;
+          visible = aw !== undefined && newCount >= aw;
+        } else {
+          return node;
+        }
+
+        const opacity = visible ? 1 : 0;
+        const pointerEvents = visible ? 'auto' : 'none';
+
+        if (node.style?.opacity === opacity) return node;
+
+        return {
+          ...node,
+          style: {
+            ...node.style,
+            opacity,
+            pointerEvents: pointerEvents as 'auto' | 'none',
+          }
+        };
+      }));
+
+      setEdges(eds => eds.map(edge => {
+        if (!edge.data) return edge;
+        const sIdx = edge.data.sourceIndex as number | undefined;
+        const tIdx = edge.data.targetIndex as number | undefined;
+        const visible = (sIdx !== undefined && tIdx !== undefined) && (sIdx < newCount && tIdx < newCount);
+        const opacity = visible ? 1 : 0;
+
+        if (edge.style?.opacity === opacity) return edge;
+
+        return {
+          ...edge,
+          animated: visible,
+          label: visible ? (edge.data.originalLabel as string | undefined) : undefined,
+          style: {
+            ...edge.style,
+            opacity,
+          }
+        };
+      }));
     }
   }, [visibleCount, setNodes, setEdges]);
 
