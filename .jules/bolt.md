@@ -1,0 +1,3 @@
+## 2025-02-18 - React Flow State Allocation Optimization
+**Learning:** O(N) array recreations and internal loops inside state setter functions (`setNodes(getNodes(...))`) cause unnecessary allocations and memory leaks when coupled with a `useRef` that continuously mutates on layout changes. Using React Flow's functional state updates mapping directly over previous state preserves referential equality of unmodified nodes, vastly improving re-render performance for complex graphs.
+**Action:** Always embed lookup index metadata (`stepIndex`, `sourceIndex`, `targetIndex`) directly inside element `data` payloads. This enables O(1) checks during `.map()` updates and eliminates the need for module-level `stepIndexMap` lookups inside rendering cycles.

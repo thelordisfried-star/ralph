@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef, useMemo, memo } from 'react';
+import { useCallback, useState, useMemo, memo } from 'react';
 import type { Node, Edge, NodeChange, EdgeChange, Connection } from '@xyflow/react';
 import {
   ReactFlow,
@@ -166,6 +166,7 @@ function createNode(step: typeof allSteps[0], visible: boolean, position?: { x: 
       title: step.label,
       description: step.description,
       phase: step.phase,
+      stepIndex: stepIndexMap.get(step.id) ?? -1,
     },
     style: {
       width: nodeWidth,
@@ -186,6 +187,11 @@ function createEdge(conn: typeof edgeConnections[0], visible: boolean): Edge {
     targetHandle: conn.targetHandle,
     label: visible ? conn.label : undefined,
     animated: visible,
+    data: {
+      sourceIndex: stepIndexMap.get(conn.source) ?? -1,
+      targetIndex: stepIndexMap.get(conn.target) ?? -1,
+      originalLabel: conn.label,
+    },
     style: {
       stroke: '#222',
       strokeWidth: 2,
@@ -216,7 +222,7 @@ function createNoteNode(note: typeof notes[0], visible: boolean, position?: { x:
     id: note.id,
     type: 'note',
     position: position || positions[note.id],
-    data: { content: note.content, color: note.color },
+    data: { content: note.content, color: note.color, appearsWithStep: note.appearsWithStep },
     style: {
       opacity: visible ? 1 : 0,
       transition: 'opacity 0.5s ease-in-out',
@@ -228,29 +234,17 @@ function createNoteNode(note: typeof notes[0], visible: boolean, position?: { x:
   };
 }
 
-const getNodes = (count: number, currentPositions: { [key: string]: { x: number; y: number } }) => {
-  const stepNodes = allSteps.map((step, index) =>
-    createNode(step, index < count, currentPositions[step.id])
-  );
-  const noteNodes = notes.map(note => {
-    const noteVisible = count >= note.appearsWithStep;
-    return createNoteNode(note, noteVisible, currentPositions[note.id]);
-  });
-  return [...stepNodes, ...noteNodes];
-};
 
-const getEdgeVisibility = (conn: typeof edgeConnections[0], visibleStepCount: number) => {
-  const sourceIndex = stepIndexMap.get(conn.source) ?? -1;
-  const targetIndex = stepIndexMap.get(conn.target) ?? -1;
-  return sourceIndex < visibleStepCount && targetIndex < visibleStepCount;
-};
 
 function App() {
   const [visibleCount, setVisibleCount] = useState(1);
-  const nodePositions = useRef<{ [key: string]: { x: number; y: number } }>({ ...positions });
 
   // Use the initial positions object directly to avoid accessing ref during render
-  const initialNodes = useMemo(() => getNodes(1, { ...positions }), []);
+  const initialNodes = useMemo<Node[]>(() => {
+    const stepNodes = allSteps.map((step, index) => createNode(step, index < 1, positions[step.id]));
+    const noteNodes = notes.map(note => createNoteNode(note, 1 >= note.appearsWithStep, positions[note.id]));
+    return [...stepNodes, ...noteNodes];
+  }, []);
   const initialEdges = useMemo(() => edgeConnections.map((conn, index) =>
     createEdge(conn, index < 0)
   ), []);
@@ -260,11 +254,7 @@ function App() {
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      changes.forEach((change) => {
-        if (change.type === 'position' && change.position) {
-          nodePositions.current[change.id] = change.position;
-        }
-      });
+
       setNodes((nds) => applyNodeChanges(changes, nds));
     },
     [setNodes]
@@ -296,11 +286,40 @@ function App() {
       const newCount = visibleCount + 1;
       setVisibleCount(newCount);
 
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
+      setNodes((nds) =>
+        nds.map((node) => {
+          if (!node.data) return node;
+          let visible = false;
+          if (node.type === 'note' && typeof node.data.appearsWithStep === 'number') {
+            visible = newCount >= node.data.appearsWithStep;
+          } else if (typeof node.data.stepIndex === 'number') {
+            visible = node.data.stepIndex < newCount;
+          }
+          const opacity = visible ? 1 : 0;
+          const pointerEvents = visible ? 'auto' : 'none';
+          if (node.style?.opacity === opacity) return node;
+          return {
+            ...node,
+            style: { ...node.style, opacity, pointerEvents: pointerEvents as 'auto' | 'none' },
+          };
+        })
+      );
+
+      setEdges((eds) =>
+        eds.map((edge) => {
+          if (!edge.data) return edge;
+          const { sourceIndex, targetIndex, originalLabel } = edge.data;
+          if (typeof sourceIndex !== 'number' || typeof targetIndex !== 'number') return edge;
+          const visible = sourceIndex < newCount && targetIndex < newCount;
+          const opacity = visible ? 1 : 0;
+          if (edge.style?.opacity === opacity) return edge;
+          return {
+            ...edge,
+            label: visible ? (originalLabel as string | undefined) : undefined,
+            animated: visible,
+            style: { ...edge.style, opacity },
+          };
+        })
       );
     }
   }, [visibleCount, setNodes, setEdges]);
@@ -310,11 +329,40 @@ function App() {
       const newCount = visibleCount - 1;
       setVisibleCount(newCount);
 
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
+      setNodes((nds) =>
+        nds.map((node) => {
+          if (!node.data) return node;
+          let visible = false;
+          if (node.type === 'note' && typeof node.data.appearsWithStep === 'number') {
+            visible = newCount >= node.data.appearsWithStep;
+          } else if (typeof node.data.stepIndex === 'number') {
+            visible = node.data.stepIndex < newCount;
+          }
+          const opacity = visible ? 1 : 0;
+          const pointerEvents = visible ? 'auto' : 'none';
+          if (node.style?.opacity === opacity) return node;
+          return {
+            ...node,
+            style: { ...node.style, opacity, pointerEvents: pointerEvents as 'auto' | 'none' },
+          };
+        })
+      );
+
+      setEdges((eds) =>
+        eds.map((edge) => {
+          if (!edge.data) return edge;
+          const { sourceIndex, targetIndex, originalLabel } = edge.data;
+          if (typeof sourceIndex !== 'number' || typeof targetIndex !== 'number') return edge;
+          const visible = sourceIndex < newCount && targetIndex < newCount;
+          const opacity = visible ? 1 : 0;
+          if (edge.style?.opacity === opacity) return edge;
+          return {
+            ...edge,
+            label: visible ? (originalLabel as string | undefined) : undefined,
+            animated: visible,
+            style: { ...edge.style, opacity },
+          };
+        })
       );
     }
   }, [visibleCount, setNodes, setEdges]);
@@ -322,7 +370,6 @@ function App() {
   // ⚡ Bolt Optimization: Reuse memoized initialNodes and initialEdges in reset to prevent O(N) recreations and object allocations.
   const handleReset = useCallback(() => {
     setVisibleCount(1);
-    nodePositions.current = { ...positions };
     setNodes(initialNodes);
     setEdges(initialEdges);
   }, [setNodes, setEdges, initialNodes, initialEdges]);
