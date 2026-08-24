@@ -1,0 +1,3 @@
+## 2024-08-24 - Optimization: Leveraging Functional State Updates in React Flow
+**Learning:** In React Flow, calculating array elements in a new iteration map without checking for actual changes to properties (like visibility opacity) causes O(N) recreations on every step, breaking referential equality and forcing unnecessary React re-renders. Additionally, passing state via Refs instead of using state callbacks requires extra lifecycle sync code.
+**Action:** Always use functional state callbacks (e.g. \`setNodes(nds => ...)\`) combined with strict referential equality checks (\`if (node.style?.opacity === targetOpacity) return node;\`) for updates to prevent object allocation and layout thrashing.
