@@ -1,0 +1,3 @@
+## 2024-05-15 - Optimizing Array Lookups in React State Maps
+**Learning:** When using functional state updates mapping over an array (e.g. updating 100 node opacities), if the visibility condition relies on searching another array (like a `Map` lookup or `findIndex`), it causes an O(N) allocation and search for *every single item* on every update, essentially becoming O(N^2) complexity.
+**Action:** Always pre-compute and store static indices or relationships directly on the data objects (e.g. passing `sourceIndex` and `targetIndex` in the element's `data` payload) when they are initialized. This allows the state update loop to run O(1) checks against the object's properties rather than performing repeated array/map lookups.
