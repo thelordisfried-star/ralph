@@ -1,0 +1,3 @@
+## 2024-05-18 - Replacing arrays destroys React Flow internal state
+**Learning:** When using `useNodesState` and `useEdgesState` in React Flow, replacing the entire array instead of selectively modifying it via functional state updates destroys internal state, such as node positions updated by user drag events. This leads to UX bugs where manually repositioned nodes snap back to their default locations on state changes.
+**Action:** Always use functional state updates (e.g., `setNodes(nds => nds.map(...))`) for modifying node/edge properties like visibility. To preserve referential equality and avoid unnecessary re-renders, return the original node/edge object if the properties haven't changed (e.g., `if (node.style?.opacity === newOpacity) return node;`).
