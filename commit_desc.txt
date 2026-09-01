@@ -1,0 +1,8 @@
+💡 What: Refactored `handleNext` and `handlePrev` to use functional state updates instead of completely recreating the nodes and edges arrays. Added `edgeMap` and `noteMap` to optimize lookup speed.
+🎯 Why: Recreating the arrays on every step destroys React Flow internal state (like dragged node positions) and causes unnecessary O(N) object allocations and re-renders for every single node/edge, even those whose visibility hasn't changed. Functional mapping with O(1) lookups reduces time complexity from O(N^2) to O(N).
+📊 Impact: Prevents destruction of node position state on step changes, improves rendering performance by maintaining referential equality for unchanged elements.
+🔬 Measurement: Drag a node, then click 'Next'. The node will stay in its dragged position instead of resetting to the default layout.
+Index log:
+* **Refactor state updates**: Modifies `handleNext` and `handlePrev` to selectively update opacity/pointerEvents on existing nodes and edges using `setNodes(nds => nds.map(...))` rather than full array replacement.
+* **Add pre-computed lookup maps**: Introduces `edgeMap` and `noteMap` outside the component to avoid O(N) `.find()` searches within the map callback.
+* **Cleanup**: Removes unused `getEdgeVisibility` helper to satisfy ESLint.
