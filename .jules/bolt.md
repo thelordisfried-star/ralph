@@ -1,0 +1,3 @@
+## 2024-10-24 - React Flow Unnecessary Recreations
+**Learning:** In React Flow, blindly recreating the entire node and edge array on every step/tick (e.g., via `getNodes` map functions) completely destroys referential equality and forces React Flow to do a massive teardown/re-render, while also destroying user-dragged node positions.
+**Action:** Always use functional state updates (`setNodes(nds => nds.map(...))`) for pagination or visibility toggles to modify properties in-place, and return the exact original object if the computed target state matches its current state to preserve referential equality and skip unnecessary React re-renders.
