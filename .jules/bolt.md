@@ -1,0 +1,3 @@
+## 2024-09-07 - Functional State Updates Preserve Internal Library State
+**Learning:** When using libraries like React Flow that manage internal complex state (like node drag positions), fully replacing the state array with a newly mapped array (O(N) recreation) on every user action forces the library to diff entirely new object references. This not only causes unnecessary re-renders but explicitly destroys intermediate state updates (like dragging a node).
+**Action:** Always prefer functional state updates (e.g., `setNodes(nds => nds.map(...))`) when toggling simple node properties. Ensure you return the unmodified original element if the calculated property matches the existing property (`node.style?.opacity === targetOpacity`) to preserve referential equality.
