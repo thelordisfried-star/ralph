@@ -228,7 +228,7 @@ function createNoteNode(note: typeof notes[0], visible: boolean, position?: { x:
   };
 }
 
-const getNodes = (count: number, currentPositions: { [key: string]: { x: number; y: number } }) => {
+const getNodes = (count: number, currentPositions: { [key: string]: { x: number; y: number } }, currentNodes: Node[] = []) => {
   const stepNodes = allSteps.map((step, index) =>
     createNode(step, index < count, currentPositions[step.id])
   );
@@ -236,7 +236,25 @@ const getNodes = (count: number, currentPositions: { [key: string]: { x: number;
     const noteVisible = count >= note.appearsWithStep;
     return createNoteNode(note, noteVisible, currentPositions[note.id]);
   });
-  return [...stepNodes, ...noteNodes];
+
+  if (currentNodes.length === 0) {
+    return [...stepNodes, ...noteNodes];
+  }
+
+  const currentNodesMap = new Map(currentNodes.map(n => [n.id, n]));
+
+  return [...stepNodes, ...noteNodes].map(newNode => {
+    const existingNode = currentNodesMap.get(newNode.id);
+
+    // ⚡ Bolt Optimization: Preserve referential equality for unmodified nodes to prevent re-renders
+    if (existingNode &&
+        existingNode.style?.opacity === newNode.style?.opacity &&
+        existingNode.position.x === newNode.position.x &&
+        existingNode.position.y === newNode.position.y) {
+      return existingNode;
+    }
+    return newNode;
+  });
 };
 
 const getEdgeVisibility = (conn: typeof edgeConnections[0], visibleStepCount: number) => {
@@ -296,12 +314,21 @@ function App() {
       const newCount = visibleCount + 1;
       setVisibleCount(newCount);
 
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      setNodes((nds) => getNodes(newCount, nodePositions.current, nds));
+      setEdges((eds) => {
+        const currentEdgesMap = new Map(eds.map(e => [e.id, e]));
+        return edgeConnections.map((conn) => {
+          const newEdge = createEdge(conn, getEdgeVisibility(conn, newCount));
+          const existingEdge = currentEdgesMap.get(newEdge.id);
+          // ⚡ Bolt Optimization: Preserve referential equality for unmodified edges
+          if (existingEdge &&
+              existingEdge.animated === newEdge.animated &&
+              existingEdge.style?.opacity === newEdge.style?.opacity) {
+            return existingEdge;
+          }
+          return newEdge;
+        });
+      });
     }
   }, [visibleCount, setNodes, setEdges]);
 
@@ -310,12 +337,21 @@ function App() {
       const newCount = visibleCount - 1;
       setVisibleCount(newCount);
 
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      setNodes((nds) => getNodes(newCount, nodePositions.current, nds));
+      setEdges((eds) => {
+        const currentEdgesMap = new Map(eds.map(e => [e.id, e]));
+        return edgeConnections.map((conn) => {
+          const newEdge = createEdge(conn, getEdgeVisibility(conn, newCount));
+          const existingEdge = currentEdgesMap.get(newEdge.id);
+          // ⚡ Bolt Optimization: Preserve referential equality for unmodified edges
+          if (existingEdge &&
+              existingEdge.animated === newEdge.animated &&
+              existingEdge.style?.opacity === newEdge.style?.opacity) {
+            return existingEdge;
+          }
+          return newEdge;
+        });
+      });
     }
   }, [visibleCount, setNodes, setEdges]);
 
