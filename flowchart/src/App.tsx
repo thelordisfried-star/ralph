@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef, useMemo, memo } from 'react';
+import { useCallback, useState, useMemo, memo } from 'react';
 import type { Node, Edge, NodeChange, EdgeChange, Connection } from '@xyflow/react';
 import {
   ReactFlow,
@@ -121,7 +121,6 @@ const NoteNode = memo(function NoteNode({ data }: { data: { content: string; col
 
 const nodeTypes = { custom: CustomNode, note: NoteNode };
 
-const stepIndexMap = new Map(allSteps.map((s, i) => [s.id, i]));
 
 const positions: { [key: string]: { x: number; y: number } } = {
   // Vertical setup flow on the left
@@ -156,6 +155,10 @@ const edgeConnections: { source: string; target: string; sourceHandle?: string; 
   // Exit
   { source: '9', target: '10', sourceHandle: 'bottom', targetHandle: 'top', label: 'No' },
 ];
+
+const stepIndexMap = new Map(allSteps.map((s, i) => [s.id, i]));
+const noteMap = new Map(notes.map(n => [n.id, n]));
+const edgeConnMap = new Map(edgeConnections.map(c => [`e${c.source}-${c.target}`, c]));
 
 function createNode(step: typeof allSteps[0], visible: boolean, position?: { x: number; y: number }): Node {
   return {
@@ -247,7 +250,6 @@ const getEdgeVisibility = (conn: typeof edgeConnections[0], visibleStepCount: nu
 
 function App() {
   const [visibleCount, setVisibleCount] = useState(1);
-  const nodePositions = useRef<{ [key: string]: { x: number; y: number } }>({ ...positions });
 
   // Use the initial positions object directly to avoid accessing ref during render
   const initialNodes = useMemo(() => getNodes(1, { ...positions }), []);
@@ -260,11 +262,6 @@ function App() {
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      changes.forEach((change) => {
-        if (change.type === 'position' && change.position) {
-          nodePositions.current[change.id] = change.position;
-        }
-      });
       setNodes((nds) => applyNodeChanges(changes, nds));
     },
     [setNodes]
@@ -291,38 +288,69 @@ function App() {
     [setEdges]
   );
 
+  // ⚡ Bolt Optimization: Extracted shared visibility logic into a helper function and used functional state updates
+  // to avoid O(N) array recreation and preserve internal React Flow state like dragged node positions.
+  const updateFlowVisibility = useCallback((newCount: number) => {
+    setVisibleCount(newCount);
+    setNodes((nds) => nds.map((node) => {
+      let visible = false;
+      if (node.type === 'custom') {
+        const stepIndex = stepIndexMap.get(node.id) ?? -1;
+        visible = stepIndex > -1 && stepIndex < newCount;
+      } else if (node.type === 'note') {
+        const note = noteMap.get(node.id);
+        visible = note ? newCount >= note.appearsWithStep : false;
+      }
+      const currentOpacity = visible ? 1 : 0;
+      const currentPointerEvents = visible ? 'auto' : 'none';
+      if (node.style?.opacity === currentOpacity && node.style?.pointerEvents === currentPointerEvents) {
+        return node;
+      }
+      return {
+        ...node,
+        style: {
+          ...node.style,
+          opacity: currentOpacity,
+          pointerEvents: currentPointerEvents,
+        },
+      };
+    }));
+
+    setEdges((eds) => eds.map((edge) => {
+      const conn = edgeConnMap.get(edge.id);
+      if (!conn) return edge;
+      const visible = getEdgeVisibility(conn, newCount);
+      const currentOpacity = visible ? 1 : 0;
+      if (edge.style?.opacity === currentOpacity && edge.animated === visible) {
+        return edge;
+      }
+      return {
+        ...edge,
+        label: visible ? conn.label : undefined,
+        animated: visible,
+        style: {
+          ...edge.style,
+          opacity: currentOpacity,
+        },
+      };
+    }));
+  }, [setNodes, setEdges]);
+
   const handleNext = useCallback(() => {
     if (visibleCount < allSteps.length) {
-      const newCount = visibleCount + 1;
-      setVisibleCount(newCount);
-
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      updateFlowVisibility(visibleCount + 1);
     }
-  }, [visibleCount, setNodes, setEdges]);
+  }, [visibleCount, updateFlowVisibility]);
 
   const handlePrev = useCallback(() => {
     if (visibleCount > 1) {
-      const newCount = visibleCount - 1;
-      setVisibleCount(newCount);
-
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      updateFlowVisibility(visibleCount - 1);
     }
-  }, [visibleCount, setNodes, setEdges]);
+  }, [visibleCount, updateFlowVisibility]);
 
   // ⚡ Bolt Optimization: Reuse memoized initialNodes and initialEdges in reset to prevent O(N) recreations and object allocations.
   const handleReset = useCallback(() => {
     setVisibleCount(1);
-    nodePositions.current = { ...positions };
     setNodes(initialNodes);
     setEdges(initialEdges);
   }, [setNodes, setEdges, initialNodes, initialEdges]);
