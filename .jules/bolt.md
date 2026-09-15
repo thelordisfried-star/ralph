@@ -1,0 +1,3 @@
+## 2024-05-24 - React Flow Internal State and Array Recreations
+**Learning:** In React Flow, constantly passing new arrays to `setNodes` and `setEdges` via `getNodes()` overrides internal library state (like node drag positions) and causes expensive re-renders. A custom `useRef` was previously used to manually track and restore node positions to work around this.
+**Action:** Instead of recreating the arrays from scratch, map over the current functional state (`setNodes(nds => nds.map(...))`) to selectively update style properties (like opacity). This preserves the internal drag state automatically and eliminates the need for manual `useRef` syncs and O(N) object allocations per drag event.
