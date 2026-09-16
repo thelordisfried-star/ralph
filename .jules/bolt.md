@@ -1,0 +1,3 @@
+## 2024-09-16 - Functional State Updates in React Flow
+**Learning:** Completely recreating the `nodes` and `edges` arrays on every state transition in React Flow causes internal components to remount and discards their metadata (such as drag positions), necessitating complex `useRef` tracking to persist them.
+**Action:** When updating visibility or styles of existing nodes/edges, use functional state updates (`setNodes(nds => nds.map(...))`) instead of full array recreations. This preserves React Flow's internal state directly and improves rendering performance by eliminating O(N) object instantiations.
