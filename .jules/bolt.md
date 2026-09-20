@@ -1,0 +1,3 @@
+## 2024-09-20 - React Flow Array Recreation Churn
+**Learning:** Completely replacing the `nodes` and `edges` arrays on state updates in React Flow (via generating entirely new objects instead of functionally mapping over existing state) not only introduces O(N) object allocation overhead on every update, but it also destroys internal library state such as the updated drag positions of nodes.
+**Action:** When updating React Flow graph elements en masse, always use functional state updates (`setNodes(nds => nds.map(...))`) and selectively mutate only the properties that need changing, preserving the rest of the object.
