@@ -1,0 +1,3 @@
+## 2024-05-27 - [Optimizing React Flow object recreation]
+**Learning:** In React Flow, when completely re-creating node arrays on every state change using external factories (e.g., \`setNodes(getNodes(...))\`), React Flow throws away its internal coordinate state for those nodes. This forces you to manually track node positions using a \`useRef\`.
+**Action:** Always prefer functional state updates (\`setNodes(nds => nds.map(...))\`) for React Flow state. Mutating existing element properties (like \`style.opacity\`) instead of replacing the entire node object prevents O(N) allocation churn and preserves React Flow's internal state tracking automatically.
