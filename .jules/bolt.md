@@ -1,0 +1,3 @@
+## 2025-02-18 - Functional React State Map Updates Ensure State Integrity
+**Learning:** In React Flow, when replacing the entire node or edge array using a state setter, internal states such as dragged node positions are completely wiped out because the internal components see entirely new objects.
+**Action:** Instead of recreating O(N) arrays on state updates, use functional updates mapping over the existing state (`setNodes(nds => nds.map(...))`) to preserve object identity and update only the required style attributes (like `opacity` or `pointerEvents`). This prevents both unnecessary allocations and UI state loss.
