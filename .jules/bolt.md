@@ -1,0 +1,3 @@
+## 2024-09-27 - React Flow Array Updating Optimization
+**Learning:** In React Flow, full array recreation via functions like \`getNodes\` (instead of functional state updates mapping over existing node instances) destroys internal state properties (like node drag coordinates) and introduces O(N) allocation overhead. This forced a clumsy workaround with a \`useRef\` hook to re-apply the position manually.
+**Action:** Replace full array regeneration with functional state mapping (\`setNodes(nds => nds.map(...))\`) and derive internal node visibility via \`useMemo\` sets, allowing us to maintain native React Flow state while removing the slow, manual position tracking via refs.
