@@ -1,0 +1,3 @@
+## 2023-10-30 - Prevent React Flow node internal state destruction
+**Learning:** Recreating the entire `nodes` array with `setNodes(getNodes(...))` in React Flow destroys the internal state of nodes, specifically their drag coordinates, forcing the application to rely on slow, manual tracking mechanisms (like an $O(N)$ loop writing to a `useRef` map).
+**Action:** Always prefer functional state updates (`setNodes(nds => nds.map(...))`) for modifying node properties like `opacity` or `style`. This mutates properties without creating entirely new node instances, preserving internal React Flow state and completely eliminating the need for manual coordinate tracking.
