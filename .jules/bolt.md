@@ -1,0 +1,5 @@
+## 2024-05-18 - Optimize React Flow Graph Rendering
+
+**Learning:** When using React Flow with dynamic node/edge creation (e.g. `getNodes` recreates the entire nodes array on every step), any updates destroy internal React Flow state such as `position` changes triggered by user dragging. Using `setNodes(nds => nds.map(...))` and directly modifying existing node properties (like `opacity` or `pointerEvents`) prevents full re-creation and O(N) object allocation, while preserving dragged positions without needing to manually track them with `useRef`.
+
+**Action:** Refactored the `App.tsx` state updates to use a functional update `updateVisibility` that directly mutates `opacity` instead of calling `getNodes(count)`. Replaced `O(N)` `.find()` calls in edge connections by caching labels and visibility with Map objects initialized once. Removed `useRef` and `onNodesChange` custom position sync as React Flow inherently handles positional sync correctly when object references are preserved via map.
