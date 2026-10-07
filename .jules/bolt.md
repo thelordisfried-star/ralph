@@ -1,0 +1,3 @@
+## 2026-10-07 - React Flow Mutable Refs vs Functional State
+**Learning:** In `@xyflow/react`, maintaining internal node state (like dragged positions) via a custom `useRef` and completely regenerating the `nodes` array on every logical step update destroys the native React Flow state management. This forces unnecessary O(N) object recreations and manual coordinate syncing.
+**Action:** Always prefer functional state updates (`setNodes(nds => nds.map(...))`) when modifying existing nodes' visibility or properties. This preserves internal drag state naturally without mutable refs and eliminates full array recreations.
