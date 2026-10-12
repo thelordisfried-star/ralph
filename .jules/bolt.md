@@ -1,0 +1,3 @@
+## 2024-10-12 - Functional state updates preserve internal state
+**Learning:** In React Flow, full array recreation using `setNodes(getNodes(...))` causes all elements to be destroyed and re-rendered from scratch, wiping internal UI states like dragging node positions.
+**Action:** Use functional state updates (`setNodes(nds => nds.map(...))`) instead of full array recreations when applying partial updates (like visibility opacity changes). This transforms operations from O(N) recreations into lightweight O(1) attribute patches while natively preserving UI state, avoiding complex and fragile ref synchronization bugs.
