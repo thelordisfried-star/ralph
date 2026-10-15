@@ -1,0 +1,3 @@
+## 2024-10-15 - React Flow State Re-creation vs Mutation Optimization
+**Learning:** In React Flow, entirely re-creating the nodes array on every step (e.g. `setNodes(getNodes(...))`) destroys internal React Flow state such as updated node positions after a user drags them. The previous code attempted to solve this by explicitly tracking positions in a `nodePositions` `useRef`.
+**Action:** Replace complete array recreation with functional state updates (e.g. `setNodes(nds => nds.map(...))`) when toggling visibility. This allows React to mutate existing node properties (like opacity) in-place without replacing the whole object, completely eliminating the need for `useRef` coordinate tracking and reducing GC overhead.
