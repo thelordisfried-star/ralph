@@ -1,0 +1,3 @@
+## 2026-10-17 - Optimize React Flow Node Updates
+**Learning:** Completely replacing the `nodes` array in React Flow using `setNodes(getNodes(...))` destroys internal state (like drag positions), requiring an anti-pattern of manually tracking coordinates via `useRef` (e.g., `nodePositions`) and syncing them on every `onNodesChange` event.
+**Action:** When updating node styles (like visibility or opacity) based on application state, use functional state updates (`setNodes(nds => nds.map(...))`) to merge new properties into the existing node objects, thereby preserving internal React Flow state and eliminating the need for external position tracking overhead.
