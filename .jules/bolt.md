@@ -1,0 +1,3 @@
+## 2024-05-17 - [Optimizing React Flow Arrays Updates]
+**Learning:** In React Flow, entirely replacing the `nodes` and `edges` arrays (via `getNodes(newCount, nodePositions.current)`) causes unnecessary overhead and destroys internal state like user-adjusted node coordinates. When using standard state replacement, we're forced to keep track of internal node coordinate changes manually (via `nodePositions.current`).
+**Action:** Use functional state updates (`setNodes(nds => nds.map(...))`) instead of full object recreation to selectively modify style properties (like opacity) while preserving internal state. This eliminates the need for maintaining separate tracking references for dimensions or positions.
