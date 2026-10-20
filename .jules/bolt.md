@@ -1,0 +1,3 @@
+## 2024-10-20 - React Flow Array Recreation Destroys Internal State
+**Learning:** Recreating entire React Flow node and edge arrays (an O(N) operation) on every state update not only impacts performance through object allocation, but crucially destroys internal React Flow states like node positioning after user drag events. This previously forced the app to rely on redundant, manual `useRef` position tracking to restore state after every render.
+**Action:** Always prefer functional state updates (`setNodes(nds => nds.map(...))`) over full array replacement to toggle properties like `opacity` and `pointerEvents` in React Flow. This preserves internal states natively and improves render efficiency.
