@@ -1,0 +1,3 @@
+## 2024-05-15 - React Flow Full Array Recreations
+**Learning:** In React Flow, completely recreating the `nodes` array (via `setNodes(getNodes())`) on every state change is a massive O(N) performance bottleneck and destroys internal graph states (like user-dragged node coordinates), forcing awkward workarounds like manual `useRef` tracking for positions.
+**Action:** Always prefer functional state updates (`setNodes(nds => nds.map(...))`) to selectively update specific properties (like opacity) on existing node references. This leverages React's diffing, avoids full O(N) object allocations, and natively preserves internal graph state without refs.
