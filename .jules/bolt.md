@@ -1,0 +1,3 @@
+## 2024-10-24 - Optimizing React Flow State Updates
+**Learning:** Fully recreating the nodes and edges arrays (`getNodes`, `createEdge`) on every state change destroys React Flow's internal state (like dragged node positions) and causes unnecessary O(N) recreations. The current implementation used a custom `useRef` (`nodePositions`) to track and restore node drag coordinates across full array re-renders.
+**Action:** Use functional state updates (`setNodes(nds => nds.map(...))`) to selectively update only the properties that change (like `opacity` or `pointerEvents`). This preserves internal state natively, eliminating the need for complex `useRef` coordinate tracking, preventing O(N) recreations, and improving pan/zoom performance.
