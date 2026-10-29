@@ -1,0 +1,3 @@
+## 2024-10-29 - React Flow Node Array Mutation
+**Learning:** Fully recreating the React Flow nodes and edges array on each state update (e.g. `setNodes(getNodes(...))`) discards internal React Flow state (like custom panning and manual node dragging positions). This necessitated a manual `useRef` coordinate tracking system (`nodePositions`) which was updated via O(N) loops on every graph pan/drag event.
+**Action:** When updating visibility or styles in React Flow, always use functional state updates (`setNodes(nds => nds.map(...))`). This naturally preserves all internal state, eliminating the need to manually track coordinates and preventing O(N) array recreation and layout side-effects.
