@@ -1,0 +1,3 @@
+## 2025-02-18 - Optimize React Flow Graph Rendering
+**Learning:** By switching from total array recreations (O(N)) on every node position update or step change to leveraging functional state updates (`setNodes(nds => nds.map(...))`) for visibility modifications, the app avoids creating and destroying `Node` objects on every step. This preserves internal React Flow states like the current user-modified drag coordinates without needing a manual `nodePositions` reference object, thus solving an architecture specific bottleneck and enabling deletion of `useRef`.
+**Action:** Always favor modifying React Flow nodes via functional updates over fully recreating them when only properties like `style` or `opacity` change.
