@@ -162,6 +162,7 @@ function createNode(step: typeof allSteps[0], visible: boolean, position?: { x: 
     id: step.id,
     type: 'custom',
     position: position || positions[step.id],
+    hidden: !visible, // ⚡ Bolt Optimization: Use React Flow's native hidden property to unmount invisible nodes from the DOM
     data: {
       title: step.label,
       description: step.description,
@@ -184,6 +185,7 @@ function createEdge(conn: typeof edgeConnections[0], visible: boolean): Edge {
     target: conn.target,
     sourceHandle: conn.sourceHandle,
     targetHandle: conn.targetHandle,
+    hidden: !visible, // ⚡ Bolt Optimization: Unmount invisible edges
     label: visible ? conn.label : undefined,
     animated: visible,
     style: {
@@ -216,6 +218,7 @@ function createNoteNode(note: typeof notes[0], visible: boolean, position?: { x:
     id: note.id,
     type: 'note',
     position: position || positions[note.id],
+    hidden: !visible, // ⚡ Bolt Optimization: Unmount invisible note nodes
     data: { content: note.content, color: note.color },
     style: {
       opacity: visible ? 1 : 0,
