@@ -1,0 +1,3 @@
+## 2024-05-24 - React Flow Performance and State Preservation
+**Learning:** When using React Flow, completely replacing the `nodes` and `edges` arrays (e.g., via `setNodes(getNodes(...))`) destroys internal positional state, such as where a user has manually dragged a node. Relying on a manual `useRef` to track and re-inject positions is inefficient and prone to bugs.
+**Action:** Always use functional state updates (`setNodes(nds => nds.map(...))`) to selectively update node properties, preserving unchanged nodes and their internal React Flow state. Calculate visibility criteria before iterating over maps to maintain O(N) complexity during rendering passes.
