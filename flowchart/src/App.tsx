@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef, useMemo, memo } from 'react';
+import { useCallback, useState, useMemo, memo } from 'react';
 import type { Node, Edge, NodeChange, EdgeChange, Connection } from '@xyflow/react';
 import {
   ReactFlow,
@@ -247,7 +247,7 @@ const getEdgeVisibility = (conn: typeof edgeConnections[0], visibleStepCount: nu
 
 function App() {
   const [visibleCount, setVisibleCount] = useState(1);
-  const nodePositions = useRef<{ [key: string]: { x: number; y: number } }>({ ...positions });
+
 
   // Use the initial positions object directly to avoid accessing ref during render
   const initialNodes = useMemo(() => getNodes(1, { ...positions }), []);
@@ -260,11 +260,6 @@ function App() {
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      changes.forEach((change) => {
-        if (change.type === 'position' && change.position) {
-          nodePositions.current[change.id] = change.position;
-        }
-      });
       setNodes((nds) => applyNodeChanges(changes, nds));
     },
     [setNodes]
@@ -291,38 +286,56 @@ function App() {
     [setEdges]
   );
 
+  // ⚡ Bolt Optimization: Use functional state updates to preserve internal React Flow state (like node drag positions)
+  // and avoid completely replacing the arrays on every step change. Calculated visibility outside loops to maintain O(N) complexity.
+  const updateGraphVisibility = useCallback((newCount: number) => {
+    setVisibleCount(newCount);
+
+    // Pre-calculate visible IDs to ensure O(N) instead of O(N^2) complexity
+    const visibleSteps = new Set(allSteps.filter((_, idx) => idx < newCount).map(s => s.id));
+    const visibleNotes = new Set(notes.filter(n => newCount >= n.appearsWithStep).map(n => n.id));
+
+    setNodes(nds => nds.map(node => {
+      const isNote = node.type === 'note';
+      const isVisible = isNote ? visibleNotes.has(node.id) : visibleSteps.has(node.id);
+      const opacity = isVisible ? 1 : 0;
+      const pointerEvents = isVisible ? 'auto' : 'none';
+      if (node.style?.opacity !== opacity) {
+        return { ...node, style: { ...node.style, opacity, pointerEvents } };
+      }
+      return node;
+    }));
+
+    const edgeMap = new Map(edgeConnections.map(c => [`e${c.source}-${c.target}`, c]));
+
+    setEdges(eds => eds.map(edge => {
+      const conn = edgeMap.get(edge.id);
+      if (!conn) return edge;
+      const isVisible = getEdgeVisibility(conn, newCount);
+      const opacity = isVisible ? 1 : 0;
+      const label = isVisible ? conn.label : undefined;
+      if (edge.style?.opacity !== opacity) {
+        return { ...edge, label, animated: isVisible, style: { ...edge.style, opacity } };
+      }
+      return edge;
+    }));
+  }, [setNodes, setEdges]);
+
   const handleNext = useCallback(() => {
     if (visibleCount < allSteps.length) {
-      const newCount = visibleCount + 1;
-      setVisibleCount(newCount);
-
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      updateGraphVisibility(visibleCount + 1);
     }
-  }, [visibleCount, setNodes, setEdges]);
+  }, [visibleCount, updateGraphVisibility]);
 
   const handlePrev = useCallback(() => {
     if (visibleCount > 1) {
-      const newCount = visibleCount - 1;
-      setVisibleCount(newCount);
-
-      setNodes(getNodes(newCount, nodePositions.current));
-      setEdges(
-        edgeConnections.map((conn) =>
-          createEdge(conn, getEdgeVisibility(conn, newCount))
-        )
-      );
+      updateGraphVisibility(visibleCount - 1);
     }
-  }, [visibleCount, setNodes, setEdges]);
+  }, [visibleCount, updateGraphVisibility]);
 
   // ⚡ Bolt Optimization: Reuse memoized initialNodes and initialEdges in reset to prevent O(N) recreations and object allocations.
   const handleReset = useCallback(() => {
     setVisibleCount(1);
-    nodePositions.current = { ...positions };
     setNodes(initialNodes);
     setEdges(initialEdges);
   }, [setNodes, setEdges, initialNodes, initialEdges]);
