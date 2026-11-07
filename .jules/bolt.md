@@ -1,0 +1,3 @@
+## 2024-05-18 - Optimized React Flow Node & Edge Array Updates
+**Learning:** Recreating the entire `nodes` and `edges` arrays using helper functions like `getNodes` on every 'Next' / 'Prev' action causes React Flow to lose its internal state (e.g. dragged node positions) and forces O(N) recreations and full re-renders, causing significant jank and layout resets.
+**Action:** Use functional state updates (`setNodes(nds => nds.map(...))`) inside a shared helper function instead. Furthermore, when mapping over edges or nodes, pre-calculate data into Map or Set objects (like `noteVisibilityMap` and `edgeConnectionMap`) instead of using `.find()` inside the map loop, which turns O(N^2) complexity into O(N).
