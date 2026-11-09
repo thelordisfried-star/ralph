@@ -1,0 +1,3 @@
+## 2024-05-24 - React Flow Internal State Destruction via Full Array Replacement
+**Learning:** In React Flow, when handling step-by-step generic flow logic (like hiding/showing nodes based on a counter), passing entirely recreated object arrays into `setNodes` and `setEdges` completely destroys React Flow's internal state reconciler. This leads to node positions reset upon navigation if they were manually dragged by a user, and forces messy workarounds like maintaining `useRef` position trackers.
+**Action:** When updating visibility or styles for React Flow nodes/edges, always use functional state mapping `setNodes((nds) => nds.map(...))` to mutate existing instances, which safely preserves React Flow's internal tracked state without external ref hacks.
